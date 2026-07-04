@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FeestKaart — ontdek waar het feest is</title>
 <link rel="icon" href="Kai_icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="Kai_icon.png">
+<meta name="theme-color" content="#1a2027">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="assets/leaflet/leaflet.css">
 <style>
   :root {
@@ -135,8 +139,16 @@
   }
   @media (max-width: 760px) {
     #layout { flex-direction: column; }
-    #sidebar { width: 100%; max-height: 45%; order: 2; border-right: none; border-top: 1px solid #2c3640; }
+    #sidebar {
+      width: 100%; max-height: 48%; order: 2; border-right: none;
+      border-top: 1px solid #2c3640; overflow-y: auto;
+    }
+    #sidebar .section, #results-header, #results { flex: none; }
+    #results { overflow: visible; }
+    .section { padding: 8px 12px; }
+    header { flex-wrap: wrap; }
     header .tagline { display: none; }
+    #search { width: 100%; margin-left: 0; order: 3; }
   }
 </style>
 </head>
