@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FeestKaart — ontdek waar het feest is</title>
 <link rel="icon" href="Kai_icon.png">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
 <style>
   :root {
     --dorp:      #f28e2b;
@@ -50,7 +50,7 @@
     border-right: 1px solid #2c3640; display: flex; flex-direction: column;
     z-index: 1100;
   }
-  #map { flex: 1; min-width: 0; }
+  #map { flex: 1; min-width: 0; background: #0d141b; }
 
   .section { padding: 12px 14px; border-bottom: 1px solid #2c3640; }
   .section h2 {
@@ -176,7 +176,7 @@
   <div id="map"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/leaflet/leaflet.js"></script>
 <script>
 // ---------------------------------------------------------------------------
 // Classificatie: elk feest geldt voor een gebied. Kleur + standaard-straal (m)
@@ -277,6 +277,21 @@ const PARTIES = [
 
 // ---------------------------------------------------------------------------
 const map = L.map("map", { zoomControl: true }).setView([48.7, 2.5], 5);
+window.map = map; // handig voor debugging/tests
+
+// Fallback-basemap: landgrenzen in een pane ónder de kaarttegels, zodat de
+// kaart ook zonder tegelserver (offline) leesbaar blijft.
+map.createPane("basemap");
+map.getPane("basemap").style.zIndex = 150;
+fetch("assets/countries-110m.geojson")
+  .then(r => r.json())
+  .then(geo => L.geoJSON(geo, {
+    pane: "basemap",
+    style: { color: "#3a4652", weight: 1, fillColor: "#1c2530", fillOpacity: 1 },
+    interactive: false,
+  }).addTo(map))
+  .catch(() => {});
+
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
