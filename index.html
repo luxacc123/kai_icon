@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FeestKaart — ontdek waar het feest is</title>
+<link rel="icon" href="Kai_icon.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --dorp:      #f28e2b;
+    --stad:      #e15759;
+    --gemeente:  #b07aa1;
+    --provincie: #59a14f;
+    --land:      #4e79a7;
+    --wereld:    #76b7b2;
+    --bg: #101418;
+    --panel: #1a2027;
+    --panel-2: #232b34;
+    --text: #e8edf2;
+    --muted: #93a1af;
+    --accent: #ffb347;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--panel);
+    border-bottom: 1px solid #2c3640; z-index: 1200;
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  header .tagline { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  #search {
+    margin-left: auto; width: min(340px, 40vw);
+    background: var(--panel-2); border: 1px solid #35404c; border-radius: 8px;
+    color: var(--text); padding: 8px 12px; font-size: 14px; outline: none;
+  }
+  #search:focus { border-color: var(--accent); }
+
+  #layout { flex: 1; display: flex; min-height: 0; }
+  #sidebar {
+    width: 330px; min-width: 260px; background: var(--panel);
+    border-right: 1px solid #2c3640; display: flex; flex-direction: column;
+    z-index: 1100;
+  }
+  #map { flex: 1; min-width: 0; }
+
+  .section { padding: 12px 14px; border-bottom: 1px solid #2c3640; }
+  .section h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .filters { display: flex; flex-direction: column; gap: 5px; }
+  .filters label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; cursor: pointer; padding: 3px 4px; border-radius: 6px;
+  }
+  .filters label:hover { background: var(--panel-2); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+  .filters .count { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 3px 4px; }
+
+  #quick { display: flex; gap: 6px; flex-wrap: wrap; }
+  #quick button {
+    background: var(--panel-2); color: var(--text); border: 1px solid #35404c;
+    border-radius: 20px; padding: 5px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  #quick button:hover { border-color: var(--accent); color: var(--accent); }
+
+  #results { flex: 1; overflow-y: auto; }
+  #results-header { padding: 10px 14px 4px; color: var(--muted); font-size: 12px; }
+  .card {
+    padding: 10px 14px; border-bottom: 1px solid #242d36; cursor: pointer;
+  }
+  .card:hover { background: var(--panel-2); }
+  .card .top { display: flex; align-items: center; gap: 8px; }
+  .card .name { font-weight: 600; font-size: 14px; flex: 1; }
+  .badge {
+    font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    color: #10151a; white-space: nowrap;
+  }
+  .card .meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .stars { color: #ffc94d; letter-spacing: 1px; font-size: 12px; }
+  .live {
+    display: inline-block; font-size: 10.5px; font-weight: 700;
+    color: #22c55e; margin-left: 6px;
+  }
+  .live::before { content: "●"; margin-right: 3px; animation: pulse 1.4s infinite; }
+  .soon { display: inline-block; font-size: 10.5px; font-weight: 700; color: #eab308; margin-left: 6px; }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  /* Leaflet popup styling */
+  .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 10px; }
+  .leaflet-popup-tip { background: var(--panel); }
+  .leaflet-popup-content { margin: 14px 16px; font-family: inherit; min-width: 230px; }
+  .pop h3 { font-size: 15px; margin-bottom: 2px; }
+  .pop .scope-line { margin: 4px 0 6px; }
+  .pop p { font-size: 12.5px; color: var(--muted); margin: 6px 0; line-height: 1.45; }
+  .pop .rating-line { font-size: 12.5px; margin: 4px 0; }
+  .pop .rating-line b { color: var(--text); }
+  .btn-ticket {
+    display: inline-block; margin-top: 8px; background: var(--accent); color: #10151a;
+    font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 8px;
+    text-decoration: none;
+  }
+  .btn-ticket:hover { filter: brightness(1.1); }
+  .btn-review {
+    display: inline-block; margin-top: 8px; margin-left: 6px; background: transparent;
+    color: var(--text); font-size: 13px; padding: 6px 12px; border-radius: 8px;
+    border: 1px solid #3a4652; cursor: pointer;
+  }
+  .aff-note { font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+  .marker-pin {
+    width: 22px; height: 22px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); border: 2px solid rgba(255,255,255,.85);
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .marker-pin::after {
+    content: ""; width: 8px; height: 8px; background: rgba(255,255,255,.9);
+    border-radius: 50%; position: absolute; top: 5px; left: 5px;
+  }
+
+  #legend-hint {
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: rgba(16,20,24,.85); padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; color: var(--muted); z-index: 1000; pointer-events: none;
+  }
+  @media (max-width: 760px) {
+    #layout { flex-direction: column; }
+    #sidebar { width: 100%; max-height: 45%; order: 2; border-right: none; border-top: 1px solid #2c3640; }
+    header .tagline { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🎉</span>
+  <h1>Feest<span>Kaart</span></h1>
+  <span class="tagline">de Google Maps van feestjes — zie wáár het feest is en hoe ver het reikt</span>
+  <input id="search" type="search" placeholder="Zoek een feest… (probeer 'carnaval' of 'Oeteldonk')">
+</header>
+
+<div id="layout">
+  <aside id="sidebar">
+    <div class="section">
+      <h2>Feestgebied (classificatie)</h2>
+      <div class="filters" id="filters"></div>
+    </div>
+    <div class="section">
+      <h2>Wanneer</h2>
+      <label class="toggle-row"><input type="checkbox" id="only-active"> Alleen nú actieve feesten</label>
+      <label class="toggle-row"><input type="checkbox" id="show-circles" checked> Toon feestgebied-cirkels</label>
+    </div>
+    <div class="section">
+      <h2>Ik ben in…</h2>
+      <div id="quick">
+        <button data-view="51.69,5.30,10">Den Bosch</button>
+        <button data-view="38.84,0.11,10">Dénia</button>
+        <button data-view="52.37,4.90,10">Amsterdam</button>
+        <button data-view="50.85,5.69,10">Maastricht</button>
+        <button id="btn-locate">📍 Mijn locatie</button>
+      </div>
+    </div>
+    <div id="results-header"></div>
+    <div id="results"></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Classificatie: elk feest geldt voor een gebied. Kleur + standaard-straal (m)
+// bepalen hoe het op de kaart wordt getoond.
+// ---------------------------------------------------------------------------
+const SCOPES = {
+  dorp:      { label: "Dorpsfeest",       color: "#f28e2b", radius: 2500 },
+  stad:      { label: "Stadsfeest",       color: "#e15759", radius: 7000 },
+  gemeente:  { label: "Gemeentefeest",    color: "#b07aa1", radius: 14000 },
+  provincie: { label: "Regio/Provincie",  color: "#59a14f", radius: 45000 },
+  land:      { label: "Landelijk",        color: "#4e79a7", radius: 130000 },
+  wereld:    { label: "Wereldwijd",       color: "#76b7b2", radius: 250000 },
+};
+
+// Demo-dataset. In productie komt dit uit een database/API met feestdagen,
+// lokale kalenders en aangeleverde events. `radius` (meters) mag per feest
+// afwijken van de standaard van de classificatie.
+// datums: [start, eind] — vandaag in de demo-context: begin juli.
+const PARTIES = [
+  // --- Nederland ---
+  { name: "Carnaval Oeteldonk", scope: "stad", lat: 51.6978, lng: 5.3037,
+    place: "'s-Hertogenbosch", tags: ["carnaval", "oeteldonk"],
+    start: "2027-02-06", end: "2027-02-09", rating: 4.8, reviews: 2413,
+    desc: "Hét stadscarnaval van Oeteldonk. Geldt voor de stad — daarbuiten heet het gewoon weer Den Bosch." },
+  { name: "Carnaval Limburg (Vastelaovend)", scope: "provincie", lat: 50.9884, lng: 5.9500,
+    place: "Limburg", tags: ["carnaval", "vastelaovend"], radius: 55000,
+    start: "2027-02-06", end: "2027-02-09", rating: 4.7, reviews: 1876,
+    desc: "Regionaal carnaval door heel Limburg: van Mestreech tot Venlo, elk dorp doet mee." },
+  { name: "Carnaval Kruikenstad", scope: "stad", lat: 51.5606, lng: 5.0919,
+    place: "Tilburg", tags: ["carnaval", "kruikenstad"],
+    start: "2027-02-06", end: "2027-02-09", rating: 4.5, reviews: 987,
+    desc: "Tilburg wordt met carnaval Kruikenstad. Stadsfeest met eigen tradities." },
+  { name: "Koningsdag", scope: "land", lat: 52.0907, lng: 5.1214,
+    place: "Heel Nederland", tags: ["koningsdag", "oranje"],
+    start: "2027-04-27", end: "2027-04-27", rating: 4.6, reviews: 5320,
+    desc: "Landelijke feestdag: vrijmarkten, festivals en oranje straten in elk dorp en elke stad." },
+  { name: "Zwarte Cross", scope: "dorp", lat: 51.9412, lng: 6.5108,
+    place: "Lichtenvoorde", tags: ["festival", "zwarte cross", "motorcross"], radius: 4000,
+    start: "2026-07-16", end: "2026-07-19", rating: 4.9, reviews: 3105,
+    desc: "Begonnen als dorpsfeest, nu het grootste betaalde festival van NL — maar het feestgebied blijft de Achterhoek rond Lichtenvoorde." },
+  { name: "Kermis Tilburg", scope: "stad", lat: 51.5555, lng: 5.0913,
+    place: "Tilburg", tags: ["kermis"],
+    start: "2026-07-17", end: "2026-07-26", rating: 4.3, reviews: 1422,
+    desc: "De grootste kermis van de Benelux, tien dagen lang door de hele binnenstad." },
+  { name: "Nijmeegse Vierdaagsefeesten", scope: "stad", lat: 51.8433, lng: 5.8609,
+    place: "Nijmegen", tags: ["vierdaagse", "zomerfeesten"],
+    start: "2026-07-11", end: "2026-07-17", rating: 4.7, reviews: 2890,
+    desc: "Zeven dagen stadsfeest rond de Vierdaagse: 40+ podia, ruim een miljoen bezoekers." },
+  { name: "Dorpsfeest Schin op Geul", scope: "dorp", lat: 50.8551, lng: 5.8672,
+    place: "Schin op Geul (gem. Valkenburg)", tags: ["dorpsfeest", "schuttersfeest"],
+    start: "2026-07-03", end: "2026-07-06", rating: 4.2, reviews: 87,
+    desc: "Klassiek Limburgs dorpsfeest met schutterij, fanfare en feesttent. Alleen hier — en juist daarom leuk." },
+  { name: "Gemeentefeest Westerkwartier", scope: "gemeente", lat: 53.2231, lng: 6.3175,
+    place: "Gemeente Westerkwartier", tags: ["gemeentefeest", "streekfeest"],
+    start: "2026-07-04", end: "2026-07-05", rating: 3.9, reviews: 54,
+    desc: "Feestweekend verspreid over de dorpen van één gemeente: elk dorp een podium, één programma." },
+  { name: "Amsterdam Pride", scope: "stad", lat: 52.3702, lng: 4.8952,
+    place: "Amsterdam", tags: ["pride", "canal parade"],
+    start: "2026-07-25", end: "2026-08-02", rating: 4.6, reviews: 4102,
+    desc: "Stadsfeest op en rond de grachten, met de Canal Parade als hoogtepunt." },
+
+  // --- Spanje / Dénia en omgeving ---
+  { name: "Bous a la Mar (Festa Major Dénia)", scope: "stad", lat: 38.8447, lng: 0.1119,
+    place: "Dénia", tags: ["bous a la mar", "festa major", "stieren"],
+    start: "2026-07-04", end: "2026-07-12", rating: 4.6, reviews: 1240,
+    desc: "Het grote stadsfeest van Dénia: stieren bij de haven, muziek en vuurwerk. NU bezig!" },
+  { name: "Moros y Cristianos Dénia", scope: "stad", lat: 38.8410, lng: 0.1057,
+    place: "Dénia", tags: ["moros y cristianos", "optocht"],
+    start: "2026-08-13", end: "2026-08-16", rating: 4.7, reviews: 933,
+    desc: "Spectaculaire optochten van Moren en Christenen door het centrum van Dénia." },
+  { name: "Fogueres de Sant Joan", scope: "provincie", lat: 38.3452, lng: -0.4810,
+    place: "Provincie Alicante", tags: ["san juan", "vreugdevuren"], radius: 60000,
+    start: "2026-06-20", end: "2026-06-24", rating: 4.5, reviews: 1560,
+    desc: "Vreugdevuren en straatfeesten langs de hele Costa Blanca rond Sint-Jan." },
+  { name: "Festa del Poble Jesús Pobre", scope: "dorp", lat: 38.7920, lng: 0.0894,
+    place: "Jesús Pobre (bij Dénia)", tags: ["dorpsfeest", "fiesta"],
+    start: "2026-07-03", end: "2026-07-07", rating: 4.4, reviews: 65,
+    desc: "Dorpsfiesta onder de Montgó: paella op straat, live muziek op het plein. NU bezig!" },
+  { name: "La Tomatina", scope: "dorp", lat: 39.4187, lng: -0.7913,
+    place: "Buñol", tags: ["tomatina", "tomaten"], radius: 3000,
+    start: "2026-08-26", end: "2026-08-26", rating: 4.3, reviews: 2201,
+    desc: "Eén dorp, één uur, 120 ton tomaten. Wereldberoemd, maar het feestgebied is écht alleen Buñol." },
+  { name: "Fallas", scope: "stad", lat: 39.4699, lng: -0.3763,
+    place: "València", tags: ["fallas", "vuurwerk"],
+    start: "2027-03-15", end: "2027-03-19", rating: 4.8, reviews: 3900,
+    desc: "Reusachtige beelden, mascletàs en vuur: het stadsfeest van València." },
+
+  // --- Wereldwijd ---
+  { name: "Kerst", scope: "wereld", lat: 50.94, lng: 6.96,
+    place: "Wereldwijd (demo-pin: Keulen kerstmarkt)", tags: ["kerst", "kerstmarkt"],
+    start: "2026-12-24", end: "2026-12-26", rating: 4.5, reviews: 9999,
+    desc: "Wereldwijd feest — op de kaart tonen we de lokale invulling, zoals kerstmarkten." },
+  { name: "Oud & Nieuw", scope: "wereld", lat: 52.3676, lng: 4.9041,
+    place: "Wereldwijd (demo-pin: Amsterdam)", tags: ["oud en nieuw", "nieuwjaar", "vuurwerk"],
+    start: "2026-12-31", end: "2027-01-01", rating: 4.4, reviews: 8541,
+    desc: "Wereldwijd, maar overal anders gevierd. Lokale events hangen onder dit wereldfeest." },
+];
+
+// ---------------------------------------------------------------------------
+const map = L.map("map", { zoomControl: true }).setView([48.7, 2.5], 5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(map);
+
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const isActive = p => new Date(p.start) <= today && today <= new Date(p.end + "T23:59:59");
+const isSoon   = p => { const d = (new Date(p.start) - today) / 864e5; return d > 0 && d <= 30; };
+
+function stars(r) {
+  const full = Math.round(r);
+  return "★".repeat(full) + "☆".repeat(5 - full);
+}
+function fmtDates(p) {
+  const opt = { day: "numeric", month: "short" };
+  const s = new Date(p.start).toLocaleDateString("nl-NL", opt);
+  const e = new Date(p.end).toLocaleDateString("nl-NL", opt);
+  return s === e ? s : `${s} – ${e}`;
+}
+
+// Marker + cirkel per feest
+const layers = PARTIES.map(p => {
+  const sc = SCOPES[p.scope];
+  const icon = L.divIcon({
+    className: "",
+    html: `<div class="marker-pin" style="background:${sc.color}"></div>`,
+    iconSize: [22, 22], iconAnchor: [11, 22], popupAnchor: [0, -22],
+  });
+  const marker = L.marker([p.lat, p.lng], { icon });
+  const circle = L.circle([p.lat, p.lng], {
+    radius: p.radius || sc.radius,
+    color: sc.color, weight: 1.5, opacity: 0.7,
+    fillColor: sc.color, fillOpacity: 0.10,
+    dashArray: p.scope === "wereld" ? "6 8" : null,
+  });
+  marker.bindPopup(() => popupHtml(p));
+  marker.on("click", () => circle.setStyle({ fillOpacity: 0.2 }));
+  marker.on("popupclose", () => circle.setStyle({ fillOpacity: 0.10 }));
+  return { p, marker, circle };
+});
+
+function popupHtml(p) {
+  const sc = SCOPES[p.scope];
+  const status = isActive(p) ? `<span class="live">NU ACTIEF</span>`
+               : isSoon(p)   ? `<span class="soon">BINNENKORT</span>` : "";
+  // Affiliate-deeplink: in productie per feest een echte partner-URL met ref-code.
+  const aff = `https://tickets.example.com/${encodeURIComponent(p.name.toLowerCase().replace(/\s+/g, "-"))}?ref=feestkaart`;
+  return `<div class="pop">
+    <h3>${p.name}${status}</h3>
+    <div class="scope-line"><span class="badge" style="background:${sc.color}">${sc.label}</span></div>
+    <div class="rating-line"><span class="stars">${stars(p.rating)}</span> <b>${p.rating}</b> · ${p.reviews.toLocaleString("nl-NL")} reviews</div>
+    <p>📍 ${p.place} · 📅 ${fmtDates(p)}</p>
+    <p>${p.desc}</p>
+    <a class="btn-ticket" href="${aff}" target="_blank" rel="noopener">🎟️ Tickets & info</a>
+    <button class="btn-review" onclick="alert('Review-flow: hier laat je bezoekers sterren + tekst achterlaten. Zo worden wij dé maatstaf voor hoe goed een feest is.')">✍️ Review</button>
+    <div class="aff-note">Ticketlink via partner (affiliate) — demo-URL</div>
+  </div>`;
+}
+
+// -------- Filters --------
+const filtersEl = document.getElementById("filters");
+const enabled = new Set(Object.keys(SCOPES));
+for (const [key, sc] of Object.entries(SCOPES)) {
+  const n = PARTIES.filter(p => p.scope === key).length;
+  const label = document.createElement("label");
+  label.innerHTML = `<input type="checkbox" checked data-scope="${key}">
+    <span class="dot" style="background:${sc.color}"></span>${sc.label}
+    <span class="count">${n}</span>`;
+  label.querySelector("input").addEventListener("change", e => {
+    e.target.checked ? enabled.add(key) : enabled.delete(key);
+    refresh();
+  });
+  filtersEl.appendChild(label);
+}
+
+const searchEl = document.getElementById("search");
+const onlyActiveEl = document.getElementById("only-active");
+const showCirclesEl = document.getElementById("show-circles");
+searchEl.addEventListener("input", refresh);
+onlyActiveEl.addEventListener("change", refresh);
+showCirclesEl.addEventListener("change", refresh);
+map.on("moveend", renderList);
+
+function matches(p) {
+  if (!enabled.has(p.scope)) return false;
+  if (onlyActiveEl.checked && !isActive(p)) return false;
+  const q = searchEl.value.trim().toLowerCase();
+  if (q) {
+    const hay = [p.name, p.place, ...(p.tags || [])].join(" ").toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function refresh() {
+  for (const { p, marker, circle } of layers) {
+    const on = matches(p);
+    if (on) {
+      marker.addTo(map);
+      showCirclesEl.checked ? circle.addTo(map) : map.removeLayer(circle);
+    } else {
+      map.removeLayer(marker); map.removeLayer(circle);
+    }
+  }
+  renderList();
+}
+
+// -------- Resultatenlijst (zichtbaar op de kaart, gesorteerd op rating) ----
+const resultsEl = document.getElementById("results");
+const resultsHeader = document.getElementById("results-header");
+function renderList() {
+  const bounds = map.getBounds();
+  const visible = layers
+    .filter(({ p, marker }) => matches(p) && bounds.contains(marker.getLatLng()))
+    .sort((a, b) => b.p.rating - a.p.rating);
+  resultsHeader.textContent = `${visible.length} feest${visible.length === 1 ? "" : "en"} in beeld — gesorteerd op rating`;
+  resultsEl.innerHTML = "";
+  for (const { p, marker } of visible) {
+    const sc = SCOPES[p.scope];
+    const card = document.createElement("div");
+    card.className = "card";
+    const status = isActive(p) ? `<span class="live">NU</span>` : isSoon(p) ? `<span class="soon">BINNENKORT</span>` : "";
+    card.innerHTML = `
+      <div class="top">
+        <span class="dot" style="background:${sc.color}"></span>
+        <span class="name">${p.name}${status}</span>
+        <span class="badge" style="background:${sc.color}">${sc.label}</span>
+      </div>
+      <div class="meta"><span class="stars">${stars(p.rating)}</span> ${p.rating} (${p.reviews.toLocaleString("nl-NL")}) · ${p.place} · ${fmtDates(p)}</div>`;
+    card.addEventListener("click", () => {
+      map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 10), { duration: .8 });
+      marker.openPopup();
+    });
+    resultsEl.appendChild(card);
+  }
+}
+
+// -------- Snelkeuze & geolocatie --------
+document.querySelectorAll("#quick button[data-view]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const [lat, lng, z] = btn.dataset.view.split(",").map(Number);
+    map.flyTo([lat, lng], z, { duration: 1 });
+  });
+});
+document.getElementById("btn-locate").addEventListener("click", () => {
+  map.locate({ setView: true, maxZoom: 10 });
+});
+map.on("locationerror", () => alert("Locatie niet beschikbaar — gebruik de snelkeuze-knoppen."));
+
+refresh();
+</script>
+<div id="legend-hint">Klik op een pin → cirkel = feestgebied · kleur = classificatie</div>
+</body>
+</html>
