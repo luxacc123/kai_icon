@@ -4,8 +4,8 @@
   "description": "De Google Maps van feestjes — zie waar het feest is en hoe ver het reikt.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#101418",
-  "theme_color": "#1a2027",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     { "src": "Kai_icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
   ]
