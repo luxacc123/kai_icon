@@ -80,6 +80,10 @@
   .cta-note { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
   .btn[disabled] { opacity: .45; pointer-events: none; }
   .empty-state { padding: 22px 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  /* programma-modus: binnen één feestgebied kijken */
+  body.focus #scope-section, body.focus #type-section, body.focus #mode-section { display: none; }
+  #focus-bar { background: #fbf7ee; }
+  .pop .actions { flex-wrap: wrap; }
 
   /* ---------- layout ---------- */
   #layout { flex: 1; display: flex; min-height: 0; }
@@ -270,11 +274,16 @@
         <div class="cta-note">Huisfeest, rave of alternatief feest. Gratis, of met tickets — wij regelen de kaartverkoop voor €0,50 per ticket.</div>
       </div>
     </div>
-    <div class="section">
+    <div class="section" id="focus-bar" style="display:none">
+      <button class="chip" id="focus-back">‹ Alle feesten</button>
+      <div class="label" id="focus-title" style="margin:10px 0 7px"></div>
+      <div class="chips" id="genre-chips"></div>
+    </div>
+    <div class="section" id="scope-section">
       <div class="label">Bereik van het feest</div>
       <div id="filters"></div>
     </div>
-    <div class="section">
+    <div class="section" id="type-section">
       <div class="label">Soort &amp; toegang</div>
       <div class="chips" id="type-chips"></div>
       <div class="chips" id="when-chips" style="margin-top:8px"></div>
@@ -513,6 +522,19 @@ const PARTIES = [
   P("Junkanoo", "land", "Straatfeest", 25.0607, -77.3454, "Bahama's", "2026-12-26", "2027-01-01", 4.5, 680, false, ["parade"], "Nachtelijke parades op Boxing Day en Nieuwjaar."),
   P("Timkat", "land", "Feestdag", 9.0300, 38.7400, "Ethiopië", "2027-01-19", "2027-01-19", 4.6, 760, false, ["epifanie"], "Ethiopisch driekoningenfeest met processies in het wit."),
 
+  // Programma-onderdelen: podia/tenten bínnen een feest, met genre.
+  // Zo beantwoord je "waar is techno tijdens carnaval?" — in productie komt
+  // dit uit organisator-feeds en partnerdata.
+  { ...P("Technotent De Parade", "dorp", "Muziekfestival", 51.6885, 5.3015, "'s-Hertogenbosch, Parade", "2027-02-06", "2027-02-09", 4.6, 312, true, ["techno"], "Vier dagen harde bassen midden in Oeteldonk.", 250), parent: "Carnaval Oeteldonk", genre: "Techno" },
+  { ...P("Hollandse Hits Paleis", "dorp", "Muziekfestival", 51.6892, 5.3043, "'s-Hertogenbosch, Markt", "2027-02-06", "2027-02-09", 4.4, 508, false, ["hollands"], "Meezingen tot je stem op is.", 250), parent: "Carnaval Oeteldonk", genre: "Hollandse hits" },
+  { ...P("Blaaskapellenroute Binnenstad", "dorp", "Volksfeest", 51.6876, 5.3005, "'s-Hertogenbosch, centrum", "2027-02-07", "2027-02-09", 4.7, 289, false, ["zate hermeniekes"], "Dweilorkesten van kroeg naar kroeg.", 400), parent: "Carnaval Oeteldonk", genre: "Blaaskapel" },
+  { ...P("Urban Stage Korte Putstraat", "dorp", "Muziekfestival", 51.6871, 5.3063, "'s-Hertogenbosch", "2027-02-06", "2027-02-08", 4.3, 176, true, ["urban", "hiphop"], "Hiphop en afro tijdens carnaval.", 200), parent: "Carnaval Oeteldonk", genre: "Urban" },
+  { ...P("Vlasmarkt", "dorp", "Muziekfestival", 51.0553, 3.7273, "Gent", "2026-07-17", "2026-07-26", 4.6, 421, false, ["elektronisch", "nachtplein"], "Het nachtplein: elektronisch tot de vroege ochtend.", 150), parent: "Gentse Feesten", genre: "Techno" },
+  { ...P("Polé Polé Graslei", "dorp", "Muziekfestival", 51.0546, 3.7205, "Gent", "2026-07-17", "2026-07-26", 4.7, 634, false, ["latin", "wereldmuziek"], "Latin en wereldmuziek aan het water.", 150), parent: "Gentse Feesten", genre: "Latin" },
+  { ...P("Sint-Baafsplein", "dorp", "Volksfeest", 51.0536, 3.7262, "Gent", "2026-07-17", "2026-07-26", 4.5, 380, false, ["vlaams", "hoofdpodium"], "Het hoofdpodium met Vlaamse artiesten.", 150), parent: "Gentse Feesten", genre: "Vlaamse muziek" },
+  { ...P("Bous a la Mar Arena", "dorp", "Volksfeest", 38.8459, 0.1147, "Dénia, haven", "2026-07-06", "2026-07-12", 4.6, 205, false, ["stieren", "haven"], "De arena aan het water — stieren en durvers.", 150), parent: "Bous a la Mar", genre: "Traditie" },
+  { ...P("Verbena Plaza Jaume I", "dorp", "Muziekfestival", 38.8441, 0.1093, "Dénia, centrum", "2026-07-04", "2026-07-12", 4.4, 156, false, ["live muziek"], "Avondconcerten en dansorkesten op het plein.", 150), parent: "Bous a la Mar", genre: "Live muziek" },
+
   // Community-laag (voorbeelden van bezoekers-inzendingen)
   { ...P("Rooftop Rave Russafa", "dorp", "Straatrave", 39.459, -0.365, "València, Russafa", "2026-07-11", "2026-07-12", 4.0, 23, false, ["rave", "rooftop"], "Zonsondergang tot zonsopgang, vrije donatie. Locatie-details na aanmelding.", 800), verified: false, community: true },
   { ...P("Huisfeest De Pijp", "dorp", "Huisfeest", 52.353, 4.892, "Amsterdam, De Pijp", "2026-07-10", "2026-07-11", null, 0, false, ["housewarming"], "Gedeeld door de organisator. Adres zichtbaar na aanmelding.", 500), verified: false, community: true },
@@ -654,7 +676,7 @@ function popupHtml(p) {
     <h3>${p.name} ${statusHtml(p)}</h3>
     <div class="row">
       <span class="badge" style="background:${sc.tint};color:${sc.text}">${sc.label}</span>
-      <span class="badge" style="background:var(--bg);color:var(--muted)">${p.type}</span>
+      <span class="badge" style="background:var(--bg);color:var(--muted)">${p.genre || p.type}</span>
       ${p.community
         ? `<span class="badge" style="background:var(--warn-bg);color:var(--warn)">Community</span>`
         : p.verified
@@ -666,6 +688,7 @@ function popupHtml(p) {
     ${p.desc ? `<p class="desc">${p.desc}</p>` : ""}
     <div class="actions">${access}
       <button class="btn btn-ghost" onclick="openReview(${idx})">Review schrijven</button>
+      ${(n => n ? `<button class="btn btn-ghost" onclick="enterFocus(${idx})">Programma (${n})</button>` : "")(PARTIES.filter(x => x.parent === p.name).length)}
     </div>
     ${note}
     ${p.src ? `<div class="aff-note">Bron: ${p.src}</div>` : ""}
@@ -679,6 +702,8 @@ const state = {
   types: new Set(),          // leeg = alle soorten
   when: null,                // null | "nu" | "weekend"
   access: null,              // null | "gratis" | "ticket"
+  focus: null,               // naam van feest waarvan we het programma bekijken
+  genres: new Set(),         // genre-filter binnen programma-modus
 };
 
 const filtersEl = document.getElementById("filters");
@@ -746,11 +771,19 @@ document.querySelectorAll(".seg").forEach(btn => {
     document.querySelectorAll(".seg").forEach(b => b.classList.toggle("on", b === btn));
     document.body.classList.toggle("ug", state.mode === "underground");
     if (picking) { picking = false; addBanner.style.display = "none"; }
+    if (state.focus) { state.focus = null; state.genres = new Set(); document.body.classList.remove("focus"); document.getElementById("focus-bar").style.display = "none"; }
     refresh();
   });
 });
 
 function matches(p) {
+  // programma-modus: alleen het hoofdfeest en zijn onderdelen, gefilterd op genre
+  if (state.focus) {
+    if (p.name !== state.focus && p.parent !== state.focus) return false;
+    if (state.genres.size && p.parent && !state.genres.has(p.genre)) return false;
+    return true;
+  }
+  if (p.parent) return false;   // programma-onderdelen alleen binnen hun feest tonen
   if (state.mode === "underground" ? !p.community : p.community) return false;
   if (!state.scopes.has(p.scope)) return false;
   if (state.mode === "main" && state.types.size && !state.types.has(p.type)) return false;
@@ -824,7 +857,7 @@ function renderList() {
         ${statusHtml(p)}
         <span class="badge" style="background:${sc.tint};color:${sc.text}">${sc.label}</span>
       </div>
-      <div class="meta">${fmtRating(p)}${p.rating != null ? ` (${fmtReviews(p.reviews)})` : ""} · ${p.place} · ${fmtDates(p)}${p.ticket ? "" : " · gratis"}</div>`;
+      <div class="meta">${fmtRating(p)}${p.rating != null ? ` (${fmtReviews(p.reviews)})` : ""}${p.genre ? ` · ${p.genre}` : ""} · ${p.place} · ${fmtDates(p)}${p.ticket ? "" : " · gratis"}</div>`;
     card.addEventListener("click", () => {
       map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 9), { duration: .7 });
       marker.openPopup();
@@ -946,6 +979,42 @@ saveBtn.addEventListener("click", () => {
   setTimeout(() => entry.marker.openPopup(), 700);
 });
 
+// -------- programma-modus: één feest, al zijn onderdelen --------
+// "Waar zijn de technotenten tijdens carnaval?" — klik Programma op een
+// feest en de kaart filtert naar de podia/tenten binnen dat feestgebied.
+window.enterFocus = idx => {
+  const p = PARTIES[idx];
+  state.focus = p.name;
+  state.genres = new Set();
+  document.body.classList.add("focus");
+  document.getElementById("focus-bar").style.display = "block";
+  document.getElementById("focus-title").textContent = "Programma · " + p.name;
+  const gc = document.getElementById("genre-chips");
+  gc.innerHTML = "";
+  const genres = [...new Set(PARTIES.filter(x => x.parent === p.name).map(x => x.genre).filter(Boolean))];
+  for (const g of genres) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = g;
+    b.addEventListener("click", () => {
+      state.genres.has(g) ? state.genres.delete(g) : state.genres.add(g);
+      b.classList.toggle("on");
+      refresh();
+    });
+    gc.appendChild(b);
+  }
+  map.closePopup();
+  refresh();
+  map.fitBounds(L.latLng(p.lat, p.lng).toBounds((p.radius || SCOPES[p.scope].radius) * 2.4));
+};
+function exitFocus() {
+  state.focus = null;
+  state.genres = new Set();
+  document.body.classList.remove("focus");
+  document.getElementById("focus-bar").style.display = "none";
+  refresh();
+}
+document.getElementById("focus-back").addEventListener("click", exitFocus);
+
 // Toegang vragen bij een Underground-feest (demo: direct geregistreerd).
 // De popup-verversing wacht tot de klik volledig is afgehandeld — DOM muteren
 // tijdens de klik breekt Leaflets klik-afscherming en sluit de popup.
@@ -1033,23 +1102,29 @@ function renderMyData() {
 }
 renderMyData();
 
-// -------- data-pijplijn inladen (assets/events.json) --------
-// Uitvoer van pipeline/: feestdagen-connector + Wikidata-connector, ontdubbeld.
-// Feesten die de redactie al op de kaart heeft gezet worden overgeslagen.
-fetch("assets/events.json")
-  .then(r => r.json())
-  .then(list => {
-    let added = 0;
-    for (const e of list) {
-      const dup = PARTIES.some(p => normName(p.name) === normName(e.name)
-        && (Math.abs(p.lat - e.lat) < 3 && Math.abs(p.lng - e.lng) < 3
-            || normName(p.place || "") === normName(e.place || "")));
-      if (dup) continue;
-      PARTIES.push(e); makeLayer(e); added++;
-    }
-    if (added) { applyStoredReviews(); refresh(); }
-  })
-  .catch(() => {});
+// -------- data-pijplijn inladen én blijven laden --------
+// Uitvoer van pipeline/: alle connectors, ontdubbeld. De pijplijn ververst
+// events.json elke paar uur; de app haalt hem elke 15 minuten opnieuw op,
+// zodat nieuwe feesten binnendruppelen zonder herladen. Al bekende feesten
+// worden overgeslagen (naam + nabijheid/plaats).
+function loadPipelineEvents() {
+  fetch("assets/events.json?t=" + Date.now())
+    .then(r => r.json())
+    .then(list => {
+      let added = 0;
+      for (const e of list) {
+        const dup = PARTIES.some(p => normName(p.name) === normName(e.name)
+          && (Math.abs(p.lat - e.lat) < 3 && Math.abs(p.lng - e.lng) < 3
+              || normName(p.place || "") === normName(e.place || "")));
+        if (dup) continue;
+        PARTIES.push(e); makeLayer(e); added++;
+      }
+      if (added) { applyStoredReviews(); refresh(); }
+    })
+    .catch(() => {});
+}
+loadPipelineEvents();
+setInterval(loadPipelineEvents, 15 * 60 * 1000);
 </script>
 <div id="legend-hint">Tik een feest aan om het feestgebied te zien · kleur = bereik</div>
 </body>

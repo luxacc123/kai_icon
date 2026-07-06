@@ -7,7 +7,22 @@ const path = require("path");
 
 const dir = path.join(__dirname, "out");
 const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith(".json")) : [];
-const all = files.flatMap(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
+const raw = files.flatMap(f => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
+
+// Kwaliteitspoort: alleen events die 100% kloppen komen op de kaart.
+// Vereist: naam, geldige coördinaten, geldige datums in de juiste volgorde.
+// Datumloos mag alleen voor bekende jaarlijks terugkerende bronnen (Wikidata).
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const isValid = e =>
+  typeof e.name === "string" && e.name.trim().length >= 3 &&
+  Number.isFinite(e.lat) && Math.abs(e.lat) <= 90 &&
+  Number.isFinite(e.lng) && Math.abs(e.lng) <= 180 &&
+  (e.start ? DATE.test(e.start) && DATE.test(e.end || "") && e.end >= e.start
+           : (e.src || "").includes("Wikidata"));
+const all = raw.filter(isValid);
+if (raw.length !== all.length) {
+  console.log(`kwaliteitspoort: ${raw.length - all.length} van ${raw.length} events afgekeurd (onvolledige datum/locatie)`);
+}
 
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 const near = (a, b) => Math.abs(a.lat - b.lat) < 0.5 && Math.abs(a.lng - b.lng) < 0.7; // ~50 km

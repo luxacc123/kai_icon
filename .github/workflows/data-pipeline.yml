@@ -6,7 +6,7 @@ name: Data-pijplijn
 
 on:
   schedule:
-    - cron: "20 4 * * *"   # elke nacht 04:20 UTC
+    - cron: "20 */6 * * *"  # elke 6 uur — continu blijven binnenhalen
   workflow_dispatch:        # ook handmatig te starten via de Actions-tab
 
 permissions:
