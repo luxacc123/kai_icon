@@ -616,7 +616,7 @@ const showCommunityEl = document.getElementById("show-community");
 searchEl.addEventListener("input", refresh);
 showCirclesEl.addEventListener("change", refresh);
 showCommunityEl.addEventListener("change", refresh);
-map.on("moveend", renderList);
+map.on("moveend", refresh);
 
 function matches(p) {
   if (p.community && !showCommunityEl.checked) return false;
@@ -634,13 +634,31 @@ function matches(p) {
   return true;
 }
 
+// Bij grote datasets (pijplijn kan duizenden feesten aanleveren) tonen we
+// alleen de relevantste markers in beeld; pannen/zoomen vult live bij.
+const MARKER_BUDGET = 350;
+const relevance = p => (isActive(p) ? 3 : 0) + (isSoon(p) ? 1.5 : 0)
+  + (p.rating || 2.5) + Math.min(2, Math.log10((p.reviews || 0) + 1));
+
 function refresh() {
-  for (const { p, marker, circle } of layers) {
-    if (matches(p)) {
-      marker.addTo(map);
-      showCirclesEl.checked ? circle.addTo(map) : map.removeLayer(circle);
+  const matched = layers.filter(({ p }) => matches(p));
+  let visible;
+  if (matched.length > MARKER_BUDGET) {
+    const b = map.getBounds().pad(0.3);
+    visible = new Set(
+      matched.filter(({ marker }) => b.contains(marker.getLatLng()))
+        .sort((a, b2) => relevance(b2.p) - relevance(a.p))
+        .slice(0, MARKER_BUDGET)
+    );
+  } else {
+    visible = new Set(matched);
+  }
+  for (const entry of layers) {
+    if (visible.has(entry)) {
+      entry.marker.addTo(map);
+      showCirclesEl.checked ? entry.circle.addTo(map) : map.removeLayer(entry.circle);
     } else {
-      map.removeLayer(marker); map.removeLayer(circle);
+      map.removeLayer(entry.marker); map.removeLayer(entry.circle);
     }
   }
   updateCounts();
@@ -652,10 +670,13 @@ const resultsEl = document.getElementById("results");
 const resultsHeader = document.getElementById("results-header");
 function renderList() {
   const bounds = map.getBounds();
-  const visible = layers
+  const all = layers
     .filter(({ p, marker }) => matches(p) && bounds.contains(marker.getLatLng()))
     .sort((a, b) => (b.p.rating || 0) - (a.p.rating || 0));
-  resultsHeader.textContent = `${visible.length} feest${visible.length === 1 ? "" : "en"} in beeld · hoogste rating eerst`;
+  const visible = all.slice(0, 75);
+  resultsHeader.textContent = all.length > 75
+    ? `${all.length} feesten in beeld · top 75, hoogste rating eerst`
+    : `${all.length} feest${all.length === 1 ? "" : "en"} in beeld · hoogste rating eerst`;
   resultsEl.innerHTML = "";
   for (const { p, marker } of visible) {
     const sc = SCOPES[p.scope];
