@@ -139,6 +139,11 @@
     content: ""; width: 6px; height: 6px; background: #fff;
     border-radius: 50%; position: absolute; top: 5px; left: 5px;
   }
+  /* community-feesten: open ring i.p.v. pin — andere laag, andere vorm */
+  .marker-ring {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #fff; border: 3.5px solid; box-shadow: 0 1px 4px rgba(23,26,30,.3);
+  }
   .leaflet-popup-content-wrapper {
     background: var(--surface); color: var(--ink);
     border-radius: 10px; box-shadow: 0 6px 24px rgba(23,26,30,.16);
@@ -247,6 +252,7 @@
       <div class="chips" id="type-chips"></div>
       <div class="chips" id="when-chips" style="margin-top:8px"></div>
       <label class="minor"><input type="checkbox" id="show-circles" checked> Toon feestgebied op de kaart</label>
+      <label class="minor"><input type="checkbox" id="show-community" checked> Community-feesten (huisfeest, rave)</label>
     </div>
     <div class="section">
       <div class="label">Ik ben in</div>
@@ -318,13 +324,17 @@ const SCOPES = {
   wereld:    { label: "Wereldwijd", color: "#2f9d96", text: "#20706b", tint: "#ddf0ee", radius: 250000 },
 };
 const TYPES = ["Muziekfestival", "Volksfeest", "Carnaval", "Feestdag", "Straatfeest"];
+// Community-laag: door bezoekers gedeelde feesten die niet uit officiële
+// bronnen komen. Eigen soorten, eigen pin-vorm, eigen aan/uit-schakelaar.
+const COMMUNITY_TYPES = ["Huisfeest", "Straatrave", "Alternatief"];
 
 // Demo-dataset: ~60 echte feesten. In productie komt dit uit de database
 // (Ticketmaster/partner-feeds, Wikidata, gemeentekalenders, eigen inzendingen).
 // s/e = start/eind, r = rating, n = aantal reviews, t = ticket nodig.
 const P = (name, scope, type, lat, lng, place, s, e, r, n, t, tags, desc, radius) =>
   ({ name, scope, type, lat, lng, place, start: s, end: e, rating: r, reviews: n,
-     ticket: t, tags: tags || [], desc: desc || "", radius });
+     ticket: t, tags: tags || [], desc: desc || "", radius,
+     verified: true, community: false });
 
 const PARTIES = [
   // Nederland & België
@@ -396,6 +406,10 @@ const PARTIES = [
   P("Halloween", "wereld", "Feestdag", 40.7336, -74.0027, "Wereldwijd", "2026-10-31", "2026-10-31", 4.3, 5210, false, ["village parade"], "Van de Village Parade in New York tot elke straat."),
   P("Kerst", "wereld", "Feestdag", 50.9413, 6.9583, "Wereldwijd", "2026-12-24", "2026-12-26", 4.5, 9820, false, ["kerstmarkt"], "Wereldwijd gevierd — op de kaart tonen we de lokale invulling."),
   P("Oud & Nieuw", "wereld", "Feestdag", 52.3676, 4.9041, "Wereldwijd", "2026-12-31", "2027-01-01", 4.4, 8541, false, ["jaarwisseling", "vuurwerk"], "Overal ter wereld, overal anders."),
+
+  // Community-laag (voorbeelden van bezoekers-inzendingen)
+  { ...P("Rooftop Rave Russafa", "dorp", "Straatrave", 39.459, -0.365, "València, Russafa", "2026-07-11", "2026-07-12", 4.0, 23, false, ["rave", "rooftop"], "Zonsondergang tot zonsopgang, vrije donatie. Locatie-details na aanmelding.", 800), verified: false, community: true },
+  { ...P("Huisfeest De Pijp", "dorp", "Huisfeest", 52.353, 4.892, "Amsterdam, De Pijp", "2026-07-10", "2026-07-11", null, 0, false, ["housewarming"], "Gedeeld door de organisator. Adres zichtbaar na aanmelding.", 500), verified: false, community: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -450,11 +464,17 @@ const statusHtml = p => isActive(p) ? `<span class="status nu">NU</span>`
 const layers = [];
 function makeLayer(p) {
   const sc = SCOPES[p.scope];
-  const icon = L.divIcon({
-    className: "",
-    html: `<div class="marker-pin" style="background:${sc.color}"></div>`,
-    iconSize: [20, 20], iconAnchor: [10, 20], popupAnchor: [0, -20],
-  });
+  const icon = p.community
+    ? L.divIcon({
+        className: "",
+        html: `<div class="marker-ring" style="border-color:${sc.color}"></div>`,
+        iconSize: [15, 15], iconAnchor: [8, 8], popupAnchor: [0, -10],
+      })
+    : L.divIcon({
+        className: "",
+        html: `<div class="marker-pin" style="background:${sc.color}"></div>`,
+        iconSize: [20, 20], iconAnchor: [10, 20], popupAnchor: [0, -20],
+      });
   const marker = L.marker([p.lat, p.lng], { icon });
   const circle = L.circle([p.lat, p.lng], {
     radius: p.radius || sc.radius,
@@ -484,6 +504,11 @@ function popupHtml(p) {
     <div class="row">
       <span class="badge" style="background:${sc.tint};color:${sc.text}">${sc.label}</span>
       <span class="badge" style="background:var(--bg);color:var(--muted)">${p.type}</span>
+      ${p.community
+        ? `<span class="badge" style="background:var(--warn-bg);color:var(--warn)">Community</span>`
+        : p.verified
+          ? `<span class="badge" style="background:var(--ok-bg);color:var(--ok)">Geverifieerd</span>`
+          : `<span class="badge" style="background:var(--bg);color:var(--faint)">Onbevestigd</span>`}
     </div>
     <div class="meta">${rline}</div>
     <div class="meta">${p.place} · ${fmtDates(p)}</div>
@@ -558,11 +583,14 @@ for (const d of whenDefs) {
 
 const searchEl = document.getElementById("search");
 const showCirclesEl = document.getElementById("show-circles");
+const showCommunityEl = document.getElementById("show-community");
 searchEl.addEventListener("input", refresh);
 showCirclesEl.addEventListener("change", refresh);
+showCommunityEl.addEventListener("change", refresh);
 map.on("moveend", renderList);
 
 function matches(p) {
+  if (p.community && !showCommunityEl.checked) return false;
   if (!state.scopes.has(p.scope)) return false;
   if (state.types.size && !state.types.has(p.type)) return false;
   if (state.when === "nu" && !isActive(p)) return false;
@@ -640,7 +668,11 @@ let adding = false, pendingLatLng = null;
 const scopeSel = document.getElementById("f-scope");
 for (const [k, sc] of Object.entries(SCOPES)) scopeSel.add(new Option(sc.label, k));
 const typeSel = document.getElementById("f-type");
-for (const t of TYPES) typeSel.add(new Option(t, t));
+const ogPub = document.createElement("optgroup"); ogPub.label = "Openbaar feest";
+for (const t of TYPES) ogPub.appendChild(new Option(t, t));
+const ogCom = document.createElement("optgroup"); ogCom.label = "Community";
+for (const t of COMMUNITY_TYPES) ogCom.appendChild(new Option(t, t));
+typeSel.append(ogPub, ogCom);
 
 btnAdd.addEventListener("click", () => {
   adding = !adding;
@@ -667,6 +699,9 @@ document.getElementById("f-save").addEventListener("click", () => {
     document.getElementById("f-ticket").value === "true",
     [], "Toegevoegd door een bezoeker — reviews bepalen vanaf nu de rating."
   );
+  p.verified = false;
+  p.community = COMMUNITY_TYPES.includes(typeSel.value);
+  if (p.community) p.radius = 600;
   PARTIES.push(p);
   const entry = makeLayer(p);
   addOverlay.classList.remove("open");
