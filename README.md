@@ -1,5 +1,8 @@
 # Feestkaart — elk feest, één kaart
 
+[![Data-pijplijn](https://github.com/luxacc123/kai_icon/actions/workflows/data-pipeline.yml/badge.svg)](https://github.com/luxacc123/kai_icon/actions/workflows/data-pipeline.yml)
+[![Site deploy](https://github.com/luxacc123/kai_icon/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/luxacc123/kai_icon/actions/workflows/deploy-pages.yml)
+
 **De Google Maps van feestjes.** Zie op één kaart welke feesten er nú actief zijn in jouw dorp, stad, regio of land — met per feest de classificatie van hoe ver het reikt (het *feestgebied*), reviews als maatstaf, en directe ticketlinks.
 
 **Live:** https://luxacc123.github.io/kai_icon/ (na de eerste deploy op `main`)
