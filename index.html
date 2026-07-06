@@ -444,12 +444,15 @@ const eventKey = p => `${normName(p.name)}@${(+p.lat).toFixed(3)},${(+p.lng).toF
 
 // Lokale opslag: eigen feesten en reviews overleven een herlaadbeurt.
 // (Tussenstap tot de echte backend — bewust zonder accounts.)
+const safeGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
 const store = {
-  events: JSON.parse(localStorage.getItem("fk_events") || "[]"),
-  reviews: JSON.parse(localStorage.getItem("fk_reviews") || "{}"),
+  events: JSON.parse(safeGet("fk_events") || "[]"),
+  reviews: JSON.parse(safeGet("fk_reviews") || "{}"),
   save() {
-    localStorage.setItem("fk_events", JSON.stringify(this.events));
-    localStorage.setItem("fk_reviews", JSON.stringify(this.reviews));
+    try {
+      localStorage.setItem("fk_events", JSON.stringify(this.events));
+      localStorage.setItem("fk_reviews", JSON.stringify(this.reviews));
+    } catch { /* opslag niet beschikbaar (bv. ingesloten voorbeeldweergave) */ }
   },
 };
 
@@ -814,7 +817,7 @@ function renderMyData() {
   mydataEl.innerHTML = `Op dit apparaat: ${store.events.length} eigen feest${store.events.length === 1 ? "" : "en"}, ${nr} review${nr === 1 ? "" : "s"} · <a href="#" id="wipe">wis mijn gegevens</a>`;
   mydataEl.querySelector("#wipe").addEventListener("click", e => {
     e.preventDefault();
-    localStorage.removeItem("fk_events"); localStorage.removeItem("fk_reviews");
+    try { localStorage.removeItem("fk_events"); localStorage.removeItem("fk_reviews"); } catch {}
     location.reload();
   });
 }
