@@ -24,9 +24,12 @@ jobs:
         working-directory: pipeline
         run: npm install --no-audit --no-fund
       - name: Connectors draaien
+        env:
+          TM_API_KEY: ${{ secrets.TM_API_KEY }}
         run: |
           node pipeline/fetch_holidays.js
           node pipeline/fetch_wikidata.js || echo "Wikidata tijdelijk niet bereikbaar — verder met overige bronnen"
+          node pipeline/fetch_ticketmaster.js || echo "Ticketmaster tijdelijk niet bereikbaar — verder met overige bronnen"
           node pipeline/merge.js
       - name: Wijzigingen committen
         run: |
