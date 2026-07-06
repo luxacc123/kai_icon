@@ -11,8 +11,10 @@ const countries = require("world-countries");
 const COUNTRIES = [
   "NL","BE","DE","FR","ES","PT","IT","GB","IE","DK","SE","NO","FI","IS",
   "PL","CZ","AT","CH","HU","RO","BG","GR","HR","RS","TR",
-  "US","CA","MX","BR","AR","CL","CO","PE",
-  "AU","NZ","JP","KR","CN","IN","TH","VN","ID","PH","ZA","MA","EG",
+  "SK","SI","LU","EE","LV","LT","UA","MT","CY","AL","BA","MK","ME",
+  "US","CA","MX","BR","AR","CL","CO","PE","UY","EC","BO","PY","VE","CR","PA","DO","JM","CU","GT",
+  "AU","NZ","JP","KR","CN","IN","TH","VN","ID","PH","MY","SG","TW","HK","AE","IL",
+  "ZA","MA","EG","KE","NG","GH","TZ","ET","SN",
 ];
 
 // Alleen dagen met een feestelijk karakter — geen herdenkingen of stille
@@ -23,9 +25,11 @@ const FESTIVE = [
   /national|nationale|nacional|independen|republi|bevrijding|liberation/i,
   /\bsan\b|\bsant\b|\bsaint\b|\bsint\b|\bsankt\b|patrick/i,
   /fiesta|festa\b|midsummer|midsommar|juhannus|sankthans|midzomer/i,
-  /muertos|diwali|deepavali|\bholi\b|songkran|\beid\b|lunar new year|春节|设立?/i,
+  /muertos|diwali|deepavali|\bholi\b|songkran|\beid\b|lunar new year|春节/i,
   /australia day|canada day|waitangi|bastille|quatorze/i,
   /reyes magos|epifan|driekoningen|three kings/i,
+  /matsuri|obon|chuseok|mid-autumn|中秋|vesak|loi krathong|loy krathong/i,
+  /junina|são joão|sao joao|ferragosto|nowruz|norooz|santa lucia/i,
 ];
 // Kerst en oud & nieuw staan al als wereldwijd feest op de kaart; en géén
 // herdenkingen of stille dagen — dit is een feestkaart.
@@ -38,7 +42,8 @@ for (const cc of COUNTRIES) {
   const country = countries.find(c => c.cca2 === cc);
   if (!country || !country.latlng) continue;
   const nameNl = (country.translations && country.translations.nld && country.translations.nld.common) || country.name.common;
-  const hd = new Holidays(cc);
+  let hd;
+  try { hd = new Holidays(cc); } catch { continue; }   // land zonder dataset: overslaan
   const all = [...(hd.getHolidays(2026) || []), ...(hd.getHolidays(2027) || [])]
     .filter(h => ["public", "observance", "optional", "bank"].includes(h.type))
     .filter(h => FESTIVE.some(rx => rx.test(h.name)) && !SKIP.test(h.name));

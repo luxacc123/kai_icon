@@ -10,9 +10,9 @@ const path = require("path");
 const SPARQL = `
 SELECT ?item ?itemLabel ?typeLabel ?coord ?sitelinks ?countryLabel WHERE {
   VALUES ?cls { wd:Q132241 wd:Q868557 wd:Q4618 }   # festival, muziekfestival, carnaval
-  ?item wdt:P31 ?cls .
+  ?item wdt:P31/wdt:P279? ?cls .                   # incl. directe subklassen (straatfestival, fiesta, …)
   ?item wikibase:sitelinks ?sitelinks .
-  FILTER(?sitelinks >= 5)                          # >= 5 Wikipedia-talen = relevant
+  FILTER(?sitelinks >= 3)                          # >= 3 Wikipedia-talen = relevant
   OPTIONAL { ?item wdt:P625 ?c1 }
   OPTIONAL { ?item wdt:P276 ?l1 . ?l1 wdt:P625 ?c2 }
   OPTIONAL { ?item wdt:P131 ?l2 . ?l2 wdt:P625 ?c3 }
@@ -22,7 +22,7 @@ SELECT ?item ?itemLabel ?typeLabel ?coord ?sitelinks ?countryLabel WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "nl,en". }
 }
 ORDER BY DESC(?sitelinks)
-LIMIT 2000`;
+LIMIT 4000`;
 
 const TYPE_MAP = { carnaval: "Carnaval", muziekfestival: "Muziekfestival" };
 

@@ -55,13 +55,31 @@
   }
   #search:focus { background: var(--surface); border-color: var(--ink); }
   #search::placeholder { color: var(--faint); }
-  .btn-add {
-    margin-left: auto; height: 36px; padding: 0 16px;
-    background: var(--ink); color: #fff; border: none; border-radius: 8px;
-    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  /* tab-wissel: Feesten (geverifieerd) vs Underground (community) */
+  .segmented {
+    display: flex; background: var(--bg); border-radius: 9px; padding: 3px; gap: 3px;
   }
-  .btn-add:hover { background: #000; }
-  .btn-add.active { background: var(--ok); }
+  .seg {
+    flex: 1; height: 34px; border: none; border-radius: 7px; background: transparent;
+    font: inherit; font-size: 13px; font-weight: 650; color: var(--muted); cursor: pointer;
+  }
+  .seg.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(23,26,30,.14); }
+  .seg.on[data-mode="underground"] { background: #241c10; color: #f2b84b; }
+  body.ug #sidebar { border-top: 2px solid #f2b84b; }
+  @media (min-width: 761px) { body.ug #sidebar { border-top: none; border-right-color: #3a2f18; } }
+
+  #add-cta { display: none; margin-top: 10px; }
+  body.ug #add-cta { display: block; }
+  body.ug #type-chips { display: none; }
+  .btn-add-big {
+    width: 100%; height: 40px; background: var(--ink); color: #fff; border: none;
+    border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer;
+  }
+  .btn-add-big:hover { background: #000; }
+  .btn-add-big.active { background: var(--ok); }
+  .cta-note { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+  .btn[disabled] { opacity: .45; pointer-events: none; }
+  .empty-state { padding: 22px 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 
   /* ---------- layout ---------- */
   #layout { flex: 1; display: flex; min-height: 0; }
@@ -238,11 +256,20 @@
 <header>
   <div class="wordmark">feestkaart<small>elk feest, één kaart</small></div>
   <input id="search" type="search" placeholder="Zoek een feest, stad of streek — bv. carnaval of Oeteldonk">
-  <button class="btn-add" id="btn-add">Feest toevoegen</button>
 </header>
 
 <div id="layout">
   <aside id="sidebar">
+    <div class="section" id="mode-section">
+      <div class="segmented">
+        <button class="seg on" data-mode="main">Feesten</button>
+        <button class="seg" data-mode="underground">Underground</button>
+      </div>
+      <div id="add-cta">
+        <button class="btn-add-big" id="btn-add">Zet je feest op de kaart</button>
+        <div class="cta-note">Huisfeest, rave of alternatief feest. Gratis, of met tickets — wij regelen de kaartverkoop voor €0,50 per ticket.</div>
+      </div>
+    </div>
     <div class="section">
       <div class="label">Bereik van het feest</div>
       <div id="filters"></div>
@@ -251,8 +278,6 @@
       <div class="label">Soort &amp; toegang</div>
       <div class="chips" id="type-chips"></div>
       <div class="chips" id="when-chips" style="margin-top:8px"></div>
-      <label class="minor"><input type="checkbox" id="show-circles" checked> Toon feestgebied op de kaart</label>
-      <label class="minor"><input type="checkbox" id="show-community" checked> Community-feesten (huisfeest, rave)</label>
     </div>
     <div class="section">
       <div class="label">Ik ben in</div>
@@ -275,28 +300,37 @@
 
 <div class="overlay" id="add-overlay">
   <div class="dialog">
-    <h3>Nieuw feest</h3>
-    <div class="sub">Jij kent je streek beter dan wij — zet het feest op de kaart.</div>
-    <div class="field"><label>Naam van het feest</label><input id="f-name" placeholder="bv. Zomerfeest Pedreguer"></div>
-    <div class="field"><label>Plaats of streek</label><input id="f-place" placeholder="bv. Pedreguer (Alicante)"></div>
+    <h3>Zet je feest op de kaart</h3>
+    <div class="sub">Underground-feesten zijn pas zichtbaar in detail voor wie toegang vraagt. Verkoop je tickets? Wij regelen de kaartverkoop voor €0,50 per ticket.</div>
+    <div class="field"><label>Waar is het?</label>
+      <div class="chips" style="margin-bottom:7px">
+        <button class="chip" id="loc-gps" type="button">Mijn huidige locatie</button>
+        <button class="chip" id="loc-map" type="button">Tik op de kaart</button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input id="loc-address" placeholder="of typ een adres of plaats…">
+        <button class="btn btn-ghost" id="loc-search" type="button" style="flex:none">Zoek</button>
+      </div>
+      <div id="loc-status" style="font-size:12px;color:var(--muted);margin-top:6px">Nog geen locatie gekozen.</div>
+    </div>
+    <div class="field"><label>Naam van het feest</label><input id="f-name" placeholder="bv. Rooftop rave Russafa"></div>
     <div class="field-row">
-      <div class="field"><label>Bereik</label><select id="f-scope"></select></div>
       <div class="field"><label>Soort</label><select id="f-type"></select></div>
+      <div class="field"><label>Toegang</label>
+        <select id="f-ticket"><option value="false">Gratis</option><option value="true">Ticket nodig</option></select>
+      </div>
     </div>
     <div class="field-row">
       <div class="field"><label>Start</label><input id="f-start" type="date"></div>
       <div class="field"><label>Einde</label><input id="f-end" type="date"></div>
     </div>
-    <div class="field"><label>Toegang</label>
-      <select id="f-ticket"><option value="false">Gratis</option><option value="true">Ticket nodig</option></select>
+    <div class="field" id="f-price-wrap" style="display:none">
+      <label>Ticketprijs in € (excl. €0,50 servicefee)</label>
+      <input id="f-price" type="number" min="1" step="0.5" placeholder="bv. 12.50">
     </div>
-    <label class="minor" id="f-sell-wrap" style="display:none">
-      <input type="checkbox" id="f-sell" checked>
-      Verkoop via Feestkaart — wij regelen de kaartverkoop (€0,50 servicefee per ticket)
-    </label>
     <div class="actions">
       <button class="btn btn-ghost" id="f-cancel">Annuleren</button>
-      <button class="btn btn-primary" id="f-save">Op de kaart zetten</button>
+      <button class="btn btn-primary" id="f-save" disabled>Op de kaart zetten</button>
     </div>
   </div>
 </div>
@@ -412,9 +446,77 @@ const PARTIES = [
   P("Kerst", "wereld", "Feestdag", 50.9413, 6.9583, "Wereldwijd", "2026-12-24", "2026-12-26", 4.5, 9820, false, ["kerstmarkt"], "Wereldwijd gevierd — op de kaart tonen we de lokale invulling."),
   P("Oud & Nieuw", "wereld", "Feestdag", 52.3676, 4.9041, "Wereldwijd", "2026-12-31", "2027-01-01", 4.4, 8541, false, ["jaarwisseling", "vuurwerk"], "Overal ter wereld, overal anders."),
 
+  // Spanje — uitbreiding
+  P("Moros y Cristianos Alcoy", "stad", "Volksfeest", 38.6987, -0.4746, "Alcoi", "2027-04-22", "2027-04-24", 4.8, 1650, false, ["moros y cristianos"], "De oudste en beroemdste Moros y Cristianos van Spanje."),
+  P("Feria de Málaga", "stad", "Volksfeest", 36.7213, -4.4214, "Málaga", "2026-08-15", "2026-08-22", 4.6, 2340, false, ["feria"], "Een week feest in het centrum én op het Real."),
+  P("Aste Nagusia", "stad", "Volksfeest", 43.263, -2.935, "Bilbao", "2026-08-22", "2026-08-30", 4.6, 1890, false, ["semana grande"], "Negen dagen Baskische Semana Grande met Marijaia."),
+  P("La Mercè", "stad", "Volksfeest", 41.3874, 2.1686, "Barcelona", "2026-09-23", "2026-09-27", 4.7, 2760, false, ["castellers", "correfoc"], "Stadsfeest met castellers, correfocs en gratis concerten."),
+  P("Sant Jordi", "provincie", "Feestdag", 41.8, 1.5, "Catalonië", "2027-04-23", "2027-04-23", 4.7, 3100, false, ["boeken", "rozen"], "Boeken en rozen op elke straathoek van Catalonië.", 90000),
+  P("Romería del Rocío", "provincie", "Volksfeest", 37.1307, -6.4903, "Huelva", "2027-05-15", "2027-05-17", 4.5, 1420, false, ["romeria"], "Bedevaart en feest — een miljoen mensen trekken naar El Rocío.", 60000),
+  P("Batalla del Vino", "dorp", "Volksfeest", 42.5776, -2.8452, "Haro", "2026-06-29", "2026-06-29", 4.4, 780, false, ["wijn"], "Iedereen in het wit, iedereen paars naar huis."),
+  P("Festa Major de Gràcia", "stad", "Straatfeest", 41.4036, 2.1565, "Barcelona, Gràcia", "2026-08-15", "2026-08-21", 4.6, 1980, false, ["versierde straten"], "De buurt versiert wekenlang haar eigen straten."),
+  P("Fallas de Dénia", "stad", "Volksfeest", 38.8402, 0.1045, "Dénia", "2027-03-15", "2027-03-19", 4.5, 410, false, ["fallas"], "De Fallas zoals in València, maar dan intiem aan zee."),
+  P("Festa Major de Pedreguer", "dorp", "Volksfeest", 38.7936, 0.0331, "Pedreguer", "2026-07-17", "2026-07-26", 4.2, 95, false, ["fiesta"], "Dorpsfiesta met bous al carrer en nachtelijke verbenas."),
+
+  // Nederland & België — uitbreiding
+  P("Carnaval Aalst", "stad", "Carnaval", 50.9378, 4.0409, "Aalst (BE)", "2027-02-07", "2027-02-09", 4.6, 1540, false, ["voil jeanetten"], "Drie dagen spot en satire — UNESCO-berucht en onverwoestbaar."),
+  P("Sinterklaasintocht", "land", "Feestdag", 52.2, 5.3, "Heel Nederland", "2026-11-14", "2026-11-14", 4.5, 3200, false, ["sinterklaas"], "De intocht — in elk dorp en elke stad tegelijk."),
+  P("Bevrijdingsfestivals", "land", "Feestdag", 52.09, 5.12, "Heel Nederland", "2027-05-05", "2027-05-05", 4.4, 2870, false, ["bevrijdingsdag", "5 mei"], "Veertien gratis festivals in één land op één dag."),
+  P("Sneekweek", "stad", "Volksfeest", 53.033, 5.6553, "Sneek", "2026-08-01", "2026-08-06", 4.4, 890, false, ["zeilen"], "Het grootste binnenwater-zeilevenement, met feest op de kade."),
+  P("Leidens Ontzet", "stad", "Volksfeest", 52.1601, 4.497, "Leiden", "2026-10-02", "2026-10-03", 4.6, 1670, false, ["3 oktober", "hutspot"], "Haring, wittebrood en hutspot — Leiden viert 1574."),
+  P("Zomercarnaval Rotterdam", "stad", "Straatfeest", 51.9225, 4.4792, "Rotterdam", "2026-07-24", "2026-07-25", 4.5, 1560, false, ["caribisch", "battle of drums"], "Caribisch straatcarnaval dwars door het centrum."),
+  P("Bloemencorso Zundert", "dorp", "Volksfeest", 51.4703, 4.6553, "Zundert", "2026-09-06", "2026-09-07", 4.7, 1340, false, ["corso", "dahlia's"], "Het grootste bloemencorso ter wereld, gebouwd door buurtschappen."),
+  P("Brabantsedag", "dorp", "Volksfeest", 51.3851, 5.5729, "Heeze", "2026-08-30", "2026-08-30", 4.4, 620, false, ["cultuurhistorische optocht"], "Theater op wielen door één Brabants dorp."),
+  P("Paaspop", "dorp", "Muziekfestival", 51.607, 5.431, "Schijndel", "2027-03-26", "2027-03-28", 4.5, 1560, true, [], "De festivalseizoen-opener van Nederland."),
+  P("Bospop", "dorp", "Muziekfestival", 51.2448, 5.6797, "Weert", "2026-07-10", "2026-07-12", 4.4, 940, true, ["rock"], "Rock in het Limburgse groen."),
+  P("Appelpop", "stad", "Muziekfestival", 51.8862, 5.4292, "Tiel", "2026-09-11", "2026-09-12", 4.3, 1120, false, ["gratis"], "Het grootste gratis muziekfestival van Nederland."),
+  P("Solar Weekend", "stad", "Muziekfestival", 51.1642, 5.9931, "Roermond", "2026-07-31", "2026-08-03", 4.3, 870, true, [], "Vier dagen dance aan de Maasplassen."),
+  P("Castlefest", "dorp", "Volksfeest", 52.2583, 4.5573, "Lisse", "2026-07-31", "2026-08-02", 4.4, 870, true, ["fantasy"], "Fantasy en folk rond Kasteel Keukenhof."),
+  P("Oerol", "dorp", "Volksfeest", 53.3962, 5.3465, "Terschelling", "2026-06-12", "2026-06-21", 4.6, 1120, true, ["theater", "eiland"], "Tien dagen lang is het hele eiland een podium."),
+
+  // Duitsland, Oostenrijk, Zwitserland
+  P("Karneval der Kulturen", "stad", "Straatfeest", 52.488, 13.413, "Berlijn (DE)", "2027-05-14", "2027-05-17", 4.5, 2130, false, ["multicultureel"], "Pinksterparade door Kreuzberg."),
+  P("Cannstatter Wasen", "stad", "Volksfeest", 48.7953, 9.2175, "Stuttgart (DE)", "2026-09-25", "2026-10-11", 4.5, 2870, false, ["bierfeest"], "Het tweede grootste bierfeest ter wereld — zonder de drukte van München."),
+  P("Kieler Woche", "stad", "Volksfeest", 54.3233, 10.1394, "Kiel (DE)", "2026-06-20", "2026-06-28", 4.5, 1980, false, ["zeilen"], "Het grootste zeilfeest ter wereld."),
+  P("Wacken Open Air", "dorp", "Muziekfestival", 53.9231, 9.3775, "Wacken (DE)", "2026-07-30", "2026-08-01", 4.8, 3450, true, ["metal"], "Een dorp van 1.800 inwoners, 85.000 metalheads."),
+  P("Basler Fasnacht", "stad", "Carnaval", 47.5596, 7.5886, "Basel (CH)", "2027-02-15", "2027-02-17", 4.6, 1720, false, ["morgestraich"], "Drie dagen — de 'drey scheenschte Dääg' — vanaf 4 uur 's ochtends."),
+  P("Donauinselfest", "stad", "Muziekfestival", 48.2114, 16.3954, "Wenen (AT)", "2026-06-26", "2026-06-28", 4.5, 2650, false, ["gratis"], "Het grootste gratis openluchtfestival van Europa."),
+
+  // Frankrijk, Italië, Portugal
+  P("Fêtes de Bayonne", "stad", "Volksfeest", 43.4933, -1.4746, "Bayonne (FR)", "2026-07-08", "2026-07-12", 4.6, 1890, false, ["rood-wit"], "Vijf dagen alles in het rood-wit — het grootste feest van Frankrijk."),
+  P("Braderie de Lille", "stad", "Volksfeest", 50.6366, 3.0633, "Lille (FR)", "2026-09-05", "2026-09-06", 4.5, 2340, false, ["rommelmarkt", "mosselen"], "De grootste vlooienmarkt van Europa, met bergen mosselschelpen."),
+  P("Palio di Siena", "stad", "Volksfeest", 43.3186, 11.3317, "Siena (IT)", "2026-08-16", "2026-08-16", 4.7, 2980, false, ["paardenrace", "contrade"], "Negentig seconden race, een jaar rivaliteit tussen de contrade."),
+  P("Umbria Jazz", "stad", "Muziekfestival", 43.1122, 12.3888, "Perugia (IT)", "2026-07-10", "2026-07-19", 4.5, 1230, true, ["jazz"], "Tien dagen jazz in een middeleeuws decor."),
+  P("Festa de São João", "stad", "Volksfeest", 41.1496, -8.6109, "Porto (PT)", "2026-06-23", "2026-06-24", 4.7, 2100, false, ["hamertjes", "sardines"], "Plastic hamertjes, sardines en vuurwerk boven de Douro."),
+  P("Festas de Lisboa", "stad", "Volksfeest", 38.7223, -9.1393, "Lissabon (PT)", "2026-06-12", "2026-06-13", 4.6, 1890, false, ["santo antónio"], "Santo António: optochten en sardines in elke wijk."),
+  P("La Notte della Taranta", "provincie", "Muziekfestival", 40.19, 18.17, "Salento (IT)", "2026-08-22", "2026-08-22", 4.5, 980, false, ["pizzica"], "Heel Salento danst de pizzica; finale in Melpignano.", 40000),
+
+  // UK & Ierland
+  P("Edinburgh Fringe", "stad", "Straatfeest", 55.9533, -3.1883, "Edinburgh (UK)", "2026-08-07", "2026-08-31", 4.8, 5210, true, ["theater", "comedy"], "Het grootste kunstenfestival ter wereld — de hele stad is podium."),
+  P("Up Helly Aa", "dorp", "Volksfeest", 60.1530, -1.1450, "Lerwick (UK)", "2027-01-26", "2027-01-26", 4.5, 670, false, ["vikingen", "vuur"], "Vikingen verbranden een drakenschip in het donker van Shetland."),
+
+  // Azië & Oceanië
+  P("Gion Matsuri", "stad", "Volksfeest", 35.0037, 135.7681, "Kyoto (JP)", "2026-07-01", "2026-07-31", 4.7, 3120, false, ["matsuri", "praalwagens"], "Een maand lang feest met eeuwenoude praalwagens."),
+  P("Awa Odori", "stad", "Volksfeest", 34.0703, 134.5549, "Tokushima (JP)", "2026-08-12", "2026-08-15", 4.6, 1450, false, ["dans"], "'De dwaas die danst en de dwaas die kijkt' — dans dan maar mee."),
+  P("Loi Krathong", "land", "Feestdag", 18.7883, 98.9853, "Heel Thailand", "2026-11-24", "2026-11-24", 4.7, 2980, false, ["lichtjes", "lantaarns"], "Drijvende lichtjes op elk water; lantaarns boven Chiang Mai."),
+  P("Boryeong Mud Festival", "stad", "Volksfeest", 36.3333, 126.6128, "Boryeong (KR)", "2026-07-24", "2026-08-09", 4.4, 1340, true, ["modder"], "Modderworstelen op het strand van Daecheon."),
+  P("Harbin IJsfestival", "stad", "Volksfeest", 45.803, 126.535, "Harbin (CN)", "2027-01-05", "2027-02-25", 4.6, 2870, true, ["ijssculpturen"], "Een complete stad van ijs en licht bij -20°C."),
+  P("Vivid Sydney", "stad", "Volksfeest", -33.8688, 151.2093, "Sydney (AU)", "2026-05-22", "2026-06-13", 4.5, 2650, false, ["licht"], "Drie weken lichtkunst over de hele haven."),
+
+  // Amerika's & Afrika
+  P("Albuquerque Balloon Fiesta", "stad", "Volksfeest", 35.1963, -106.5964, "Albuquerque (US)", "2026-10-03", "2026-10-11", 4.7, 2340, true, ["luchtballonnen"], "Vijfhonderd ballonnen tegelijk de lucht in."),
+  P("Calle Ocho Festival", "stad", "Straatfeest", 25.766, -80.219, "Miami (US)", "2027-03-14", "2027-03-14", 4.4, 1230, false, ["latin"], "Het grootste latin-straatfeest van de VS."),
+  P("Carnaval de Barranquilla", "stad", "Carnaval", 10.9685, -74.7813, "Barranquilla (CO)", "2027-02-06", "2027-02-09", 4.7, 2100, false, ["cumbia"], "Na Rio het grootste carnaval van Zuid-Amerika."),
+  P("Inti Raymi", "stad", "Volksfeest", -13.5170, -71.9785, "Cusco (PE)", "2026-06-24", "2026-06-24", 4.6, 1450, false, ["inca", "zonnefeest"], "Het Incafeest van de zon, op de heuvels boven Cusco."),
+  P("Festa Junina", "land", "Feestdag", -8.0476, -34.877, "Heel Brazilië", "2026-06-01", "2026-06-30", 4.6, 2980, false, ["são joão", "quadrilha"], "Een maand juni-feesten in het hele land; Recife en Caruaru voorop."),
+  P("Oktoberfest Blumenau", "stad", "Volksfeest", -26.9194, -49.0661, "Blumenau (BR)", "2026-10-07", "2026-10-25", 4.5, 1670, false, ["bier"], "Het grootste Oktoberfest buiten Duitsland — in Brazilië."),
+  P("Junkanoo", "land", "Straatfeest", 25.0607, -77.3454, "Bahama's", "2026-12-26", "2027-01-01", 4.5, 680, false, ["parade"], "Nachtelijke parades op Boxing Day en Nieuwjaar."),
+  P("Timkat", "land", "Feestdag", 9.0300, 38.7400, "Ethiopië", "2027-01-19", "2027-01-19", 4.6, 760, false, ["epifanie"], "Ethiopisch driekoningenfeest met processies in het wit."),
+
   // Community-laag (voorbeelden van bezoekers-inzendingen)
   { ...P("Rooftop Rave Russafa", "dorp", "Straatrave", 39.459, -0.365, "València, Russafa", "2026-07-11", "2026-07-12", 4.0, 23, false, ["rave", "rooftop"], "Zonsondergang tot zonsopgang, vrije donatie. Locatie-details na aanmelding.", 800), verified: false, community: true },
   { ...P("Huisfeest De Pijp", "dorp", "Huisfeest", 52.353, 4.892, "Amsterdam, De Pijp", "2026-07-10", "2026-07-11", null, 0, false, ["housewarming"], "Gedeeld door de organisator. Adres zichtbaar na aanmelding.", 500), verified: false, community: true },
+  { ...P("Warehouse Rave Noord", "dorp", "Straatrave", 52.394, 4.918, "Amsterdam-Noord", "2026-07-18", "2026-07-19", 4.5, 41, true, ["warehouse", "techno"], "Oude loods aan het IJ. Line-up en adres na goedkeuring.", 700), verified: false, community: true, sellVia: true, price: 12.5 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -448,10 +550,12 @@ const safeGet = k => { try { return localStorage.getItem(k); } catch { return nu
 const store = {
   events: JSON.parse(safeGet("fk_events") || "[]"),
   reviews: JSON.parse(safeGet("fk_reviews") || "{}"),
+  access: JSON.parse(safeGet("fk_access") || "{}"),
   save() {
     try {
       localStorage.setItem("fk_events", JSON.stringify(this.events));
       localStorage.setItem("fk_reviews", JSON.stringify(this.reviews));
+      localStorage.setItem("fk_access", JSON.stringify(this.access));
     } catch { /* opslag niet beschikbaar (bv. ingesloten voorbeeldweergave) */ }
   },
 };
@@ -500,13 +604,18 @@ function makeLayer(p) {
         iconSize: [20, 20], iconAnchor: [10, 20], popupAnchor: [0, -20],
       });
   const marker = L.marker([p.lat, p.lng], { icon });
+  // Feestgebied-cirkel alleen tonen voor het aangeklikte feest — anders
+  // wordt de kaart één brij van overlappende cirkels.
   const circle = L.circle([p.lat, p.lng], {
     radius: p.radius || sc.radius,
-    color: sc.color, weight: 1, opacity: 0.55,
-    fillColor: sc.color, fillOpacity: 0.08,
+    color: sc.color, weight: 1.5, opacity: 0.7,
+    fillColor: sc.color, fillOpacity: 0.12,
     dashArray: p.scope === "wereld" ? "5 7" : null,
+    interactive: false,
   });
   marker.bindPopup(() => popupHtml(p), { maxWidth: 300 });
+  marker.on("popupopen", () => circle.addTo(map));
+  marker.on("popupclose", () => map.removeLayer(circle));
   const entry = { p, marker, circle };
   layers.push(entry);
   return entry;
@@ -518,11 +627,26 @@ function popupHtml(p) {
   // echte ticket-URL uit de databron (bv. Ticketmaster); anders demo-partnerlink
   const aff = p.url || `https://tickets.example.com/${encodeURIComponent(p.name.toLowerCase().replace(/\s+/g, "-"))}?ref=feestkaart`;
   const idx = PARTIES.indexOf(p);
-  const access = p.sellVia
-    ? `<a class="btn btn-primary" href="#" onclick="alert('Demo: hier opent de Feestkaart-checkout — kaartverkoop namens de organisator, €0,50 servicefee per ticket.');return false">Tickets via Feestkaart</a>`
-    : p.ticket
-      ? `<a class="btn btn-primary" href="${aff}" target="_blank" rel="noopener">Tickets kopen</a>`
-      : `<span class="free-chip">Gratis toegang</span>`;
+  const priceTxt = p.price ? ` · €${(+p.price).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}` : "";
+  let access, note = "";
+  if (p.community) {
+    // Underground: eerst toegang vragen, dan pas details/tickets
+    if (!store.access[eventKey(p)]) {
+      access = `<button class="btn btn-primary" onclick="requestAccess(${idx})">Vraag toegang${priceTxt}</button>`;
+      note = `<div class="aff-note">Exacte locatie en details zie je zodra de organisator je toelaat.</div>`;
+    } else if (p.ticket) {
+      access = `<a class="btn btn-primary" href="#" onclick="alert('Demo: Feestkaart-checkout — kaartverkoop namens de organisator, €0,50 servicefee per ticket.');return false">Tickets via Feestkaart${priceTxt}</a>`;
+      note = `<div class="aff-note">Toegang aangevraagd — organisator bevestigt. Kaartverkoop via Feestkaart (€0,50 servicefee p/t).</div>`;
+    } else {
+      access = `<span class="free-chip">Toegang aangevraagd</span>`;
+      note = `<div class="aff-note">De organisator bevestigt je aanmelding en deelt dan de exacte locatie.</div>`;
+    }
+  } else if (p.ticket) {
+    access = `<a class="btn btn-primary" href="${aff}" target="_blank" rel="noopener">Tickets kopen</a>`;
+    note = `<div class="aff-note">Ticketlink via partner — zo blijft Feestkaart gratis.</div>`;
+  } else {
+    access = `<span class="free-chip">Gratis toegang</span>`;
+  }
   const rline = p.rating == null
     ? `<span class="rating none">nieuw — nog geen reviews</span>`
     : `${fmtRating(p)} <span style="color:var(--muted);font-size:12.5px">· ${fmtReviews(p.reviews)} reviews</span>`;
@@ -543,14 +667,14 @@ function popupHtml(p) {
     <div class="actions">${access}
       <button class="btn btn-ghost" onclick="openReview(${idx})">Review schrijven</button>
     </div>
-    ${p.sellVia ? `<div class="aff-note">Kaartverkoop door Feestkaart namens de organisator.</div>`
-      : p.ticket ? `<div class="aff-note">Ticketlink via partner — zo blijft Feestkaart gratis.</div>` : ""}
+    ${note}
     ${p.src ? `<div class="aff-note">Bron: ${p.src}</div>` : ""}
   </div>`;
 }
 
 // -------- filters --------
 const state = {
+  mode: "main",              // "main" (geverifieerd) | "underground" (community)
   scopes: new Set(Object.keys(SCOPES)),
   types: new Set(),          // leeg = alle soorten
   when: null,                // null | "nu" | "weekend"
@@ -571,7 +695,8 @@ for (const [key, sc] of Object.entries(SCOPES)) {
 function updateCounts() {
   for (const label of filtersEl.children) {
     const k = label.dataset.scope;
-    label.querySelector(".count").textContent = PARTIES.filter(p => p.scope === k).length;
+    label.querySelector(".count").textContent = PARTIES.filter(p =>
+      p.scope === k && (state.mode === "underground" ? p.community : !p.community)).length;
   }
 }
 
@@ -611,17 +736,24 @@ for (const d of whenDefs) {
 }
 
 const searchEl = document.getElementById("search");
-const showCirclesEl = document.getElementById("show-circles");
-const showCommunityEl = document.getElementById("show-community");
 searchEl.addEventListener("input", refresh);
-showCirclesEl.addEventListener("change", refresh);
-showCommunityEl.addEventListener("change", refresh);
 map.on("moveend", refresh);
 
+// tab-wissel: Feesten <-> Underground
+document.querySelectorAll(".seg").forEach(btn => {
+  btn.addEventListener("click", () => {
+    state.mode = btn.dataset.mode;
+    document.querySelectorAll(".seg").forEach(b => b.classList.toggle("on", b === btn));
+    document.body.classList.toggle("ug", state.mode === "underground");
+    if (picking) { picking = false; addBanner.style.display = "none"; }
+    refresh();
+  });
+});
+
 function matches(p) {
-  if (p.community && !showCommunityEl.checked) return false;
+  if (state.mode === "underground" ? !p.community : p.community) return false;
   if (!state.scopes.has(p.scope)) return false;
-  if (state.types.size && !state.types.has(p.type)) return false;
+  if (state.mode === "main" && state.types.size && !state.types.has(p.type)) return false;
   if (state.when === "nu" && !isActive(p)) return false;
   if (state.when === "weekend" && !isWeekend(p)) return false;
   if (state.access === "gratis" && p.ticket) return false;
@@ -656,7 +788,6 @@ function refresh() {
   for (const entry of layers) {
     if (visible.has(entry)) {
       entry.marker.addTo(map);
-      showCirclesEl.checked ? entry.circle.addTo(map) : map.removeLayer(entry.circle);
     } else {
       map.removeLayer(entry.marker); map.removeLayer(entry.circle);
     }
@@ -678,6 +809,11 @@ function renderList() {
     ? `${all.length} feesten in beeld · top 75, hoogste rating eerst`
     : `${all.length} feest${all.length === 1 ? "" : "en"} in beeld · hoogste rating eerst`;
   resultsEl.innerHTML = "";
+  if (!all.length) {
+    resultsHeader.textContent = "";
+    resultsEl.innerHTML = `<div class="empty-state">Geen feesten in beeld. Zoom uit, verschuif de kaart of pas je filters aan.${state.mode === "underground" ? "<br><br>Of zet zelf het eerste feest op de kaart." : ""}</div>`;
+    return;
+  }
   for (const { p, marker } of visible) {
     const sc = SCOPES[p.scope];
     const card = document.createElement("div");
@@ -709,65 +845,118 @@ document.getElementById("btn-locate").addEventListener("click", () => {
 });
 map.on("locationerror", () => alert("Locatie niet beschikbaar — gebruik de snelkeuze."));
 
-// -------- feest toevoegen (zelf-onderhoudende data) --------
+// -------- feest toevoegen (alleen Underground-tab) --------
 const btnAdd = document.getElementById("btn-add");
 const addBanner = document.getElementById("add-banner");
 const addOverlay = document.getElementById("add-overlay");
-let adding = false, pendingLatLng = null;
+let picking = false, pendingLatLng = null;
 
-const scopeSel = document.getElementById("f-scope");
-for (const [k, sc] of Object.entries(SCOPES)) scopeSel.add(new Option(sc.label, k));
 const typeSel = document.getElementById("f-type");
-const ogPub = document.createElement("optgroup"); ogPub.label = "Openbaar feest";
-for (const t of TYPES) ogPub.appendChild(new Option(t, t));
-const ogCom = document.createElement("optgroup"); ogCom.label = "Community";
-for (const t of COMMUNITY_TYPES) ogCom.appendChild(new Option(t, t));
-typeSel.append(ogPub, ogCom);
+for (const t of COMMUNITY_TYPES) typeSel.add(new Option(t, t));
 
-btnAdd.addEventListener("click", () => {
-  adding = !adding;
-  btnAdd.classList.toggle("active", adding);
-  btnAdd.textContent = adding ? "Klik op de kaart…" : "Feest toevoegen";
-  addBanner.style.display = adding ? "block" : "none";
+const locStatus = document.getElementById("loc-status");
+const saveBtn = document.getElementById("f-save");
+function setLoc(lat, lng, label) {
+  pendingLatLng = { lat, lng };
+  locStatus.textContent = "Locatie: " + label;
+  locStatus.style.color = "var(--ok)";
+  updateSaveState();
+}
+function updateSaveState() {
+  if (pendingLatLng && document.getElementById("f-name").value.trim()) {
+    saveBtn.removeAttribute("disabled");
+  } else {
+    saveBtn.setAttribute("disabled", "");
+  }
+}
+document.getElementById("f-name").addEventListener("input", updateSaveState);
+
+btnAdd.addEventListener("click", () => addOverlay.classList.add("open"));
+
+document.getElementById("loc-gps").addEventListener("click", () => {
+  locStatus.textContent = "Locatie bepalen…"; locStatus.style.color = "var(--muted)";
+  navigator.geolocation.getCurrentPosition(
+    pos => setLoc(pos.coords.latitude, pos.coords.longitude, "je huidige locatie"),
+    () => { locStatus.textContent = "Locatie niet beschikbaar — typ een adres of tik op de kaart."; }
+  );
+});
+document.getElementById("loc-search").addEventListener("click", async () => {
+  const q = document.getElementById("loc-address").value.trim();
+  if (!q) return;
+  locStatus.textContent = "Zoeken…"; locStatus.style.color = "var(--muted)";
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`);
+    const hits = await res.json();
+    if (!hits.length) { locStatus.textContent = "Niets gevonden — probeer een ander adres."; return; }
+    setLoc(+hits[0].lat, +hits[0].lon, hits[0].display_name.split(",").slice(0, 2).join(","));
+  } catch {
+    locStatus.textContent = "Adres zoeken is nu niet bereikbaar — tik op de kaart.";
+  }
+});
+document.getElementById("loc-address").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("loc-search").click();
+});
+document.getElementById("loc-map").addEventListener("click", () => {
+  addOverlay.classList.remove("open");
+  picking = true;
+  addBanner.style.display = "block";
 });
 map.on("click", e => {
-  if (!adding) return;
-  pendingLatLng = e.latlng;
+  if (!picking) return;
+  picking = false;
+  addBanner.style.display = "none";
+  setLoc(e.latlng.lat, e.latlng.lng, `${e.latlng.lat.toFixed(3)}, ${e.latlng.lng.toFixed(3)}`);
   addOverlay.classList.add("open");
 });
+
 document.getElementById("f-cancel").addEventListener("click", () => addOverlay.classList.remove("open"));
 document.getElementById("f-ticket").addEventListener("change", e => {
-  document.getElementById("f-sell-wrap").style.display = e.target.value === "true" ? "flex" : "none";
+  document.getElementById("f-price-wrap").style.display = e.target.value === "true" ? "block" : "none";
 });
-document.getElementById("f-save").addEventListener("click", () => {
+saveBtn.addEventListener("click", () => {
   const name = document.getElementById("f-name").value.trim();
   if (!name || !pendingLatLng) return;
+  const startVal = document.getElementById("f-start").value || new Date().toISOString().slice(0, 10);
   const p = P(
-    name, scopeSel.value, typeSel.value,
+    name, "dorp", typeSel.value,
     pendingLatLng.lat, pendingLatLng.lng,
-    document.getElementById("f-place").value.trim() || "Eigen inzending",
-    document.getElementById("f-start").value || new Date().toISOString().slice(0, 10),
-    document.getElementById("f-end").value || document.getElementById("f-start").value || new Date().toISOString().slice(0, 10),
+    "Underground",
+    startVal,
+    document.getElementById("f-end").value || startVal,
     null, 0,
     document.getElementById("f-ticket").value === "true",
-    [], "Toegevoegd door een bezoeker — reviews bepalen vanaf nu de rating."
+    [], "Details en exacte locatie na goedkeuring van de organisator.", 600
   );
   p.verified = false;
-  p.community = COMMUNITY_TYPES.includes(typeSel.value);
-  if (p.community) p.radius = 600;
-  p.sellVia = p.ticket && document.getElementById("f-sell").checked;
+  p.community = true;
+  p.sellVia = p.ticket;
+  p.price = p.ticket ? (+document.getElementById("f-price").value || null) : null;
   PARTIES.push(p);
   store.events.push(p);
   store.save();
   renderMyData();
   const entry = makeLayer(p);
   addOverlay.classList.remove("open");
-  adding = false; btnAdd.classList.remove("active");
-  btnAdd.textContent = "Feest toevoegen"; addBanner.style.display = "none";
+  pendingLatLng = null;
+  locStatus.textContent = "Nog geen locatie gekozen."; locStatus.style.color = "var(--muted)";
+  document.getElementById("f-name").value = "";
+  updateSaveState();
   refresh();
-  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 10), { duration: .6 });
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 12), { duration: .6 });
   setTimeout(() => entry.marker.openPopup(), 700);
 });
+
+// Toegang vragen bij een Underground-feest (demo: direct geregistreerd).
+// De popup-verversing wacht tot de klik volledig is afgehandeld — DOM muteren
+// tijdens de klik breekt Leaflets klik-afscherming en sluit de popup.
+window.requestAccess = idx => {
+  const p = PARTIES[idx];
+  store.access[eventKey(p)] = true;
+  store.save();
+  renderMyData();
+  const entry = layers.find(l => l.p === p);
+  if (entry) setTimeout(() => { entry.marker.closePopup(); entry.marker.openPopup(); }, 0);
+};
 
 // -------- reviews --------
 const reviewOverlay = document.getElementById("review-overlay");
@@ -838,7 +1027,7 @@ function renderMyData() {
   mydataEl.innerHTML = `Op dit apparaat: ${store.events.length} eigen feest${store.events.length === 1 ? "" : "en"}, ${nr} review${nr === 1 ? "" : "s"} · <a href="#" id="wipe">wis mijn gegevens</a>`;
   mydataEl.querySelector("#wipe").addEventListener("click", e => {
     e.preventDefault();
-    try { localStorage.removeItem("fk_events"); localStorage.removeItem("fk_reviews"); } catch {}
+    try { localStorage.removeItem("fk_events"); localStorage.removeItem("fk_reviews"); localStorage.removeItem("fk_access"); } catch {}
     location.reload();
   });
 }
@@ -862,6 +1051,6 @@ fetch("assets/events.json")
   })
   .catch(() => {});
 </script>
-<div id="legend-hint">Cirkel = feestgebied · kleur = bereik van het feest</div>
+<div id="legend-hint">Tik een feest aan om het feestgebied te zien · kleur = bereik</div>
 </body>
 </html>

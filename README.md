@@ -12,7 +12,7 @@
 - **Bereik-classificatie**: elk feest geldt voor een gebied — dorp, stad, gemeente, regio, land of wereldwijd. Eigen kleur per niveau, cirkel op de kaart toont het feestgebied.
 - **Filters**: soort feest, gratis/met ticket, nu bezig, dit weekend.
 - **Reviews**: beoordelingen tellen live mee in de rating en blijven bewaard op het apparaat.
-- **Feest toevoegen**: bezoekers zetten zelf feesten op de kaart. Huisfeesten, straatraves en alternatieve feesten vormen een aparte *community*-laag (eigen pin-vorm, eigen schakelaar).
+- **Underground-tab**: huisfeesten, straatraves en alternatieve feesten leven in een eigen wereld, gescheiden van de geverifieerde hoofdkaart. Bezoekers vragen er toegang; organisatoren zetten er zelf feesten op (locatie via GPS, adres of kaart-tik) en verkopen tickets via Feestkaart (€0,50 servicefee per ticket).
 - **Verificatie**: feesten uit officiële bronnen dragen een "Geverifieerd"-badge met bronvermelding; inzendingen zijn "Onbevestigd" tot een tweede bron ze bevestigt.
 - **Organisator-ticketing**: organisatoren kunnen bij het toevoegen kiezen voor kaartverkoop via Feestkaart (servicefee-model).
 
