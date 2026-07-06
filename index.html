@@ -289,6 +289,10 @@
     <div class="field"><label>Toegang</label>
       <select id="f-ticket"><option value="false">Gratis</option><option value="true">Ticket nodig</option></select>
     </div>
+    <label class="minor" id="f-sell-wrap" style="display:none">
+      <input type="checkbox" id="f-sell" checked>
+      Verkoop via Feestkaart — wij regelen de kaartverkoop (€0,50 servicefee per ticket)
+    </label>
     <div class="actions">
       <button class="btn btn-ghost" id="f-cancel">Annuleren</button>
       <button class="btn btn-primary" id="f-save">Op de kaart zetten</button>
@@ -435,9 +439,10 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 }).addTo(map);
 
 const today = new Date(); today.setHours(0, 0, 0, 0);
-const isActive = p => new Date(p.start) <= today && today <= new Date(p.end + "T23:59:59");
-const isSoon = p => { const d = (new Date(p.start) - today) / 864e5; return d > 0 && d <= 21; };
+const isActive = p => p.start && new Date(p.start) <= today && today <= new Date(p.end + "T23:59:59");
+const isSoon = p => { if (!p.start) return false; const d = (new Date(p.start) - today) / 864e5; return d > 0 && d <= 21; };
 const isWeekend = p => {
+  if (!p.start) return false;
   // zaterdag/zondag van de huidige week (za–zo als je al in het weekend zit)
   const dow = today.getDay(); // 0 = zondag
   const sat = new Date(today); sat.setDate(today.getDate() + ((6 - dow) % 7) - (dow === 0 ? 7 : 0));
@@ -452,6 +457,7 @@ const fmtReviews = n => n >= 1000
   ? (n / 1000).toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "k"
   : String(n);
 const fmtDates = p => {
+  if (!p.start) return "jaarlijks";
   const opt = { day: "numeric", month: "short" };
   const s = new Date(p.start).toLocaleDateString("nl-NL", opt);
   const e = new Date(p.end).toLocaleDateString("nl-NL", opt);
@@ -493,9 +499,11 @@ function popupHtml(p) {
   const sc = SCOPES[p.scope];
   const aff = `https://tickets.example.com/${encodeURIComponent(p.name.toLowerCase().replace(/\s+/g, "-"))}?ref=feestkaart`;
   const idx = PARTIES.indexOf(p);
-  const access = p.ticket
-    ? `<a class="btn btn-primary" href="${aff}" target="_blank" rel="noopener">Tickets kopen</a>`
-    : `<span class="free-chip">Gratis toegang</span>`;
+  const access = p.sellVia
+    ? `<a class="btn btn-primary" href="#" onclick="alert('Demo: hier opent de Feestkaart-checkout — kaartverkoop namens de organisator, €0,50 servicefee per ticket.');return false">Tickets via Feestkaart</a>`
+    : p.ticket
+      ? `<a class="btn btn-primary" href="${aff}" target="_blank" rel="noopener">Tickets kopen</a>`
+      : `<span class="free-chip">Gratis toegang</span>`;
   const rline = p.rating == null
     ? `<span class="rating none">nieuw — nog geen reviews</span>`
     : `${fmtRating(p)} <span style="color:var(--muted);font-size:12.5px">· ${fmtReviews(p.reviews)} reviews</span>`;
@@ -516,7 +524,9 @@ function popupHtml(p) {
     <div class="actions">${access}
       <button class="btn btn-ghost" onclick="openReview(${idx})">Review schrijven</button>
     </div>
-    ${p.ticket ? `<div class="aff-note">Ticketlink via partner — zo blijft Feestkaart gratis.</div>` : ""}
+    ${p.sellVia ? `<div class="aff-note">Kaartverkoop door Feestkaart namens de organisator.</div>`
+      : p.ticket ? `<div class="aff-note">Ticketlink via partner — zo blijft Feestkaart gratis.</div>` : ""}
+    ${p.src ? `<div class="aff-note">Bron: ${p.src}</div>` : ""}
   </div>`;
 }
 
@@ -686,6 +696,9 @@ map.on("click", e => {
   addOverlay.classList.add("open");
 });
 document.getElementById("f-cancel").addEventListener("click", () => addOverlay.classList.remove("open"));
+document.getElementById("f-ticket").addEventListener("change", e => {
+  document.getElementById("f-sell-wrap").style.display = e.target.value === "true" ? "flex" : "none";
+});
 document.getElementById("f-save").addEventListener("click", () => {
   const name = document.getElementById("f-name").value.trim();
   if (!name || !pendingLatLng) return;
@@ -702,6 +715,7 @@ document.getElementById("f-save").addEventListener("click", () => {
   p.verified = false;
   p.community = COMMUNITY_TYPES.includes(typeSel.value);
   if (p.community) p.radius = 600;
+  p.sellVia = p.ticket && document.getElementById("f-sell").checked;
   PARTIES.push(p);
   const entry = makeLayer(p);
   addOverlay.classList.remove("open");
@@ -747,6 +761,25 @@ document.getElementById("r-save").addEventListener("click", () => {
 });
 
 refresh();
+
+// -------- data-pijplijn inladen (assets/events.json) --------
+// Uitvoer van pipeline/: feestdagen-connector + Wikidata-connector, ontdubbeld.
+// Feesten die de redactie al op de kaart heeft gezet worden overgeslagen.
+const normName = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+fetch("assets/events.json")
+  .then(r => r.json())
+  .then(list => {
+    let added = 0;
+    for (const e of list) {
+      const dup = PARTIES.some(p => normName(p.name) === normName(e.name)
+        && (Math.abs(p.lat - e.lat) < 3 && Math.abs(p.lng - e.lng) < 3
+            || normName(p.place || "") === normName(e.place || "")));
+      if (dup) continue;
+      PARTIES.push(e); makeLayer(e); added++;
+    }
+    if (added) refresh();
+  })
+  .catch(() => {});
 </script>
 <div id="legend-hint">Cirkel = feestgebied · kleur = bereik van het feest</div>
 </body>
